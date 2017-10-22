@@ -142,16 +142,7 @@ def run_ml_center_learner(trainx, trainy):
     Aub = np.vstack((Aub_data, Aub_box_lower, Aub_box_upper))
     bub = np.vstack((bub_data, bub_box_lower, bub_box_upper)).flatten()
 
-    # TODO: needed?
-    x0_bounds = (None, None)
-    x1_bounds = (None, None)
-    x2_bounds = (None, None)
-    x3_bounds = (None, None)
-    x4_bounds = (None, None)
-    x5_bounds = (None, None)
-    res = lp(c=c, A_ub=Aub, b_ub=bub, bounds=(x0_bounds, x1_bounds, x2_bounds, x3_bounds, x4_bounds, x5_bounds))
-    return res
-
+    return lp(c=c, A_ub=Aub, b_ub=bub, bounds=(None, None))
 
 def make_meshgrid(x, y, h=.02):
     """Create a mesh of points to plot in

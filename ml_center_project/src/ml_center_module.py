@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 np.set_printoptions(linewidth=100, edgeitems='all', suppress=True,
                     precision=2)
 
+
 class ThisSVC(object):
     """
     Support vector classifier to compare.
@@ -76,6 +77,7 @@ class ThisSVC(object):
         predY = clf.predict(self.tsX)
         self.predY = predY
 
+
 class CenterMachine(object):
     """
     New learning machine
@@ -83,21 +85,24 @@ class CenterMachine(object):
     def __init__(self):
         pass
 
-def get_label_adjusted_kernel(trainx, trainy):
+
+def get_label_adjusted_train_kernel(trainx, trainy):
     """
-    Compute the kernel matrix which takes labels into consideration.  The kernel
-    matrix has l rows and l+1 columns, where l is the number of samples in trainx
-    and trainy. This function returns K.T from Trafalis, Malyscheff, ACM, 2002.
+    Compute the training kernel matrix. This matrix also takes labels into consideration.
+    The training kernel matrix has l+1 rows and l columns, where l is the number of
+    samples in trainx and trainy.
+    All columns are multiplied by the corresponding yj.  This implies that the l+1 row
+    contains yj's.  Corresponds to K.T from Trafalis, Malyscheff, ACM, 2002.
 
     Parameters
     ----------
-    In    : trainx, input samples (d by l)
-            trainy, labels (d by 1)
-    Out   : kmat
+    In    : trainx, input samples for training set (d by l)
+            trainy, labels for training set (d by 1) (flattened)
+    Out   : ktrain
 
     Usage:
     ------
-    kmat = get_label_adjusted_kernel(trainx, trainy)
+    ktrain = get_label_adjusted_train_kernel(trainx, trainy)
     """
     k = pairwise_kernels(X=trX, metric='linear')
     # multiply by labels and add row, same K as in Trafalis Malyscheff, ACM, 2002
@@ -105,20 +110,44 @@ def get_label_adjusted_kernel(trainx, trainy):
     K = np.vstack((K, trY))
     return K.T
 
-def run_ml_center_learner(trainx, trainy):
+
+def get_label_adjusted_test_kernel(trainx, testx):
+    """
+    Compute the test kernel matrix.  The test kernel matrix has l+1 rows and l columns,
+    however, the l+1 row has 1s, not the labels yj. Columns are not multiplied by yj.
+
+    Parameters
+    ----------
+    In    : trainx, input samples for training set (d by l)
+            testx, input samples for test set (d by num_test_samples)
+    Out   : ktrain
+
+    Usage:
+    ------
+    ktest = get_label_adjusted_test_kernel(trainx, testx)
+    """
+    num_test_samples = testx.shape[0]
+    ktest = pairwise_kernels(X=trainx, Y=testx, metric='linear')
+    # add row of ones
+    Ktest = np.vstack((ktest, np.ones((1, num_test_samples))))
+    return Ktest.T
+
+
+def learn_ml_center(trainx, trainy):
     """
     Build linear learning model by minimizing the epigraph of hyperplanes in
     kernelized version space.
 
     Parameters
     ----------
-    In    : trainx, input samples (d by l)
-            trainy, labels (d by 1)
-    Out   : res, optimal weights (alpha_1, ..., alpha_l, b) and optimal eps
+    In    : trainx, input samples (l by d)
+            trainy, labels (l) (flattened)
+    Out   : weight_opt, eps_opt
+            optimal weights (alpha_1, ..., alpha_l, b) and optimal eps
 
     Usage:
     ------
-    res = run_ml_center_learner(trainx, trainy)
+    weight_opt, eps_opt = learn_ml_center(trainx, trainy)
     """
     [num_samples, num_features] = trainx.shape
 
@@ -126,7 +155,7 @@ def run_ml_center_learner(trainx, trainy):
     c = np.vstack((np.zeros((num_samples+1, 1)), 1)).flatten()
 
     # Constraints from data (halfspaces)
-    kmat = get_label_adjusted_kernel(trainx, trainy)
+    kmat = get_label_adjusted_train_kernel(trainx, trainy)
     Aub_data = np.hstack((-kmat, -np.ones((num_samples, 1))))
     bub_data = np.zeros((num_samples, 1))
 
@@ -141,8 +170,64 @@ def run_ml_center_learner(trainx, trainy):
     # Putting it all together
     Aub = np.vstack((Aub_data, Aub_box_lower, Aub_box_upper))
     bub = np.vstack((bub_data, bub_box_lower, bub_box_upper)).flatten()
+    res = lp(c=c, A_ub=Aub, b_ub=bub, bounds=(None, None))
+    weight_opt = res.x
+    # last element is epsilon
+    weight_opt = weight_opt[:-1]
+    eps_opt = res.fun
+    return weight_opt, eps_opt
 
-    return lp(c=c, A_ub=Aub, b_ub=bub, bounds=(None, None))
+
+def predict_ml_center(weight_opt, trainx, testx):
+    """
+    Predict test set using ml_center model. weight_opt is the optimal vector of weights.
+    trainx is the training input.  testx is the test input.
+
+    Parameters
+    ----------
+    In    : weight_opt, trainx, testx
+    Out   : ftestx
+
+    Usage:
+    ------
+    ftestx = predict_ml_center(weight_opt, trainx, testx)
+    """
+    ktest = get_label_adjusted_test_kernel(trainx, testx)
+    return np.sign(np.dot(ktest, weight_opt))
+
+
+def plot_data_and_contours(ax, trainx, trainy, meshstep=0.02):
+    """
+    Build linear learning model by minimizing the epigraph of hyperplanes in
+    kernelized version space.
+
+    Parameters
+    ----------
+    In    : ax object
+          : trainx, input samples (l by d)
+            trainy, labels (l) (flattened)
+    Out   : out
+
+    Usage:
+    ------
+    plot_data_and_contours(ax, trainx, trainy, meshstep=0.02)
+    """
+    # TODO: pass clf object directly to plot_countours
+    if trainx.shape[1] == 2:
+        xmin = trainx[:, 0].min() - 1
+        xmax = trainx[:, 0].max() + 1
+        ymin = trainx[:, 1].min() - 1
+        ymax = trainx[:, 1].max() + 1
+        xx, yy = np.meshgrid(np.arange(xmin, xmax+meshstep, meshstep),
+                             np.arange(ymin, ymax+meshstep, meshstep))
+        # TODO: Want this as: Z = predict_ml_center(np.c_[xx.ravel(), yy.ravel()])
+        Z = predict_ml_center(weight_opt, trainx, np.c_[xx.ravel(), yy.ravel()])
+        Z = Z.reshape(xx.shape)
+        out = ax.contourf(xx, yy, Z)
+        return out
+    else:
+        return "Input sample dimension must be equal to 2. Exiting. "
+
 
 def make_meshgrid(x, y, h=.02):
     """Create a mesh of points to plot in
@@ -189,114 +274,78 @@ if __name__ == '__main__':
 
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
-    svc_C = 10000
-    svc_kernel = 'rbf'
-    svc_degree = 3  # ignored by rbf and other kernels
-    svc_gamma = 1.0
-    svc_coef0 = 1.0  # poly and sigmoid kernel only
-    svc_cache_size = 500
-    svc_tol = 0.001  # default 1e-3
-    svc_verbose = False
-    svc_max_iter = -1  # default -1 for not limit
+    # Testing AND data
+    trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
+    trY = [1, -1, -1, -1]
+    tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    tsY = [1, -1, 1]
+    weight_opt, eps_opt = learn_ml_center(trX, trY)
+    ftestx = predict_ml_center(weight_opt, trX, tsX)
+    print "weight_opt = ", weight_opt
+    print "eps_opt = ", eps_opt
+    print "[ftestx, tsY] = \n", np.array([ftestx, np.array(tsY)]).T
 
-    # trX = [[0, 0], [1, 1]]
-    # trY = [0, 1]
-    # tsX = [[2., 2.]]
-    # tsY = [1]
-    # Total sample size 150
-    iris = datasets.load_iris()
-    X = iris.data[:, :2]
-    Y = iris.target
-    # Samples 0...99 contain only class 0 and 1
-    X = X[:100, :]
-    Y = Y[:100]
-    trX = np.vstack((X[:25, :], X[75:, :]))
-    tsX = X[25:75, :]
-    trY = np.hstack((Y[:25], Y[75:]))
-    tsY = Y[25:75]
-
-    C = 1.0  # SVM regularization parameter
-    models = (svm.SVC(kernel='linear', C=C),
-              svm.LinearSVC(C=C),
-              svm.SVC(kernel='rbf', gamma=7.7, C=C),
-              svm.SVC(kernel='poly', degree=3, C=C))
-    models = (clf.fit(trX, trY) for clf in models)
-
-    # title for the plots
-    titles = ('SVC with linear kernel',
-              'LinearSVC (linear kernel)',
-              'SVC with RBF kernel',
-              'SVC with polynomial (degree 3) kernel')
-
-    # Set-up 2x2 grid for plotting.
-    fig, sub = plt.subplots(2, 2)
-    plt.subplots_adjust(wspace=0.4, hspace=0.4)
-
-    X0, X1 = trX[:, 0], trX[:, 1]
-    xx, yy = make_meshgrid(X0, X1)
-
-    for clf, title, ax in zip(models, titles, sub.flatten()):
-        plot_contours(ax, clf, xx, yy,
-                      cmap=plt.cm.coolwarm, alpha=0.8)
-        ax.scatter(X0, X1, c=trY, cmap=plt.cm.coolwarm, s=20, edgecolors='k')
-        ax.set_xlim(xx.min(), xx.max())
-        ax.set_ylim(yy.min(), yy.max())
-        ax.set_xlabel('Sepal length')
-        ax.set_ylabel('Sepal width')
-        ax.set_xticks(())
-        ax.set_yticks(())
-        ax.set_title(title)
+    fig, ax = plt.subplots(1, 1)
+    # plot_contours(ax, clf, xx, yy, cmap=plt.cm.coolwarm, alpha=0.8)
+    # ax = sub.flatten()
+    plot_data_and_contours(ax, trX, trY, meshstep=0.02)
+    ax.scatter(trX[:, 0], trX[:, 1], c=trY, cmap=plt.cm.coolwarm, s=60, edgecolors='k')
 
     plt.show()
 
-    # Loading AND data
-    EPSTOL = 1e-6
-    trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-    trY = np.array([1, -1, -1, -1])
 
-    # Fast nonkernelized LP
-    [num_samples, num_features] = trX.shape
-    c = np.vstack((np.zeros((num_features+1, 1)), 1)).flatten()
-
-    # Change 0 labels to -1
-    trY = [i if i == 1 else -1 for i in trY]
-    # Include bias b
-    trX = np.hstack((trX, np.ones((num_samples, 1))))
-    k = np.multiply(np.array(trY).reshape(len(trY), 1), trX)
-    Aub_data = np.hstack((-k, -np.ones((num_samples, 1))))
-    bub_data = np.zeros((num_samples, 1))
-
-    # num_features+1 to account for bias
-    d1 = -np.identity(num_features+1)
-    d2 = np.identity(num_features+1)
-    kbox = np.vstack((d1, d2))
-    Aub_box = np.hstack((kbox, -np.ones((2*(num_features+1), 1))))
-    bub_box = np.ones((2*(num_features+1), 1))
-
-    Aub = np.vstack((Aub_data, Aub_box))
-    bub = np.vstack((bub_data, bub_box)).flatten()
-    x0_bounds = (None, None)
-    x1_bounds = (None, None)
-    x2_bounds = (None, None)
-    x3_bounds = (None, None)
-    # x0_bounds = (-10, 10)
-    # x1_bounds = (-10, 10)
-    # x2_bounds = (-10, 10)
-    # x3_bounds = (-10, 10)
-    res = lp(c=c, A_ub=Aub, b_ub=bub, bounds=(x0_bounds, x1_bounds, x2_bounds, x3_bounds))
-    # res = lp(c=c, A_ub=Aub, b_ub=bub)
-
-    res.x
-    wopt = res.x
-    print "wopt = ", wopt
-    epsopt = res.fun
-    print "epsopt = ", epsopt
-    print "Feasibility check: \n", np.dot(Aub, wopt) < bub + EPSTOL
-
-
-    # this_svc = ThisSVC(svc_C, svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_cache_size)
-    # this_svc.get_data(trX, trY, tsX, tsY)
-    # this_svc.run_this_svc()
-
-
+    # svc_C = 10000
+    # svc_kernel = 'rbf'
+    # svc_degree = 3  # ignored by rbf and other kernels
+    # svc_gamma = 1.0
+    # svc_coef0 = 1.0  # poly and sigmoid kernel only
+    # svc_cache_size = 500
+    # svc_tol = 0.001  # default 1e-3
+    # svc_verbose = False
+    # svc_max_iter = -1  # default -1 for not limit
+    #
+    # iris = datasets.load_iris()
+    # X = iris.data[:, :2]
+    # Y = iris.target
+    # # Samples 0...99 contain only class 0 and 1
+    # X = X[:100, :]
+    # Y = Y[:100]
+    # trX = np.vstack((X[:25, :], X[75:, :]))
+    # tsX = X[25:75, :]
+    # trY = np.hstack((Y[:25], Y[75:]))
+    # tsY = Y[25:75]
+    #
+    # C = 1.0  # SVM regularization parameter
+    # models = (svm.SVC(kernel='linear', C=C),
+    #           svm.LinearSVC(C=C),
+    #           svm.SVC(kernel='rbf', gamma=7.7, C=C),
+    #           svm.SVC(kernel='poly', degree=3, C=C))
+    # models = (clf.fit(trX, trY) for clf in models)
+    #
+    # # title for the plots
+    # titles = ('SVC with linear kernel',
+    #           'LinearSVC (linear kernel)',
+    #           'SVC with RBF kernel',
+    #           'SVC with polynomial (degree 3) kernel')
+    #
+    # # Set-up 2x2 grid for plotting.
+    # fig, sub = plt.subplots(2, 2)
+    # plt.subplots_adjust(wspace=0.4, hspace=0.4)
+    #
+    # X0, X1 = trX[:, 0], trX[:, 1]
+    # xx, yy = make_meshgrid(X0, X1)
+    #
+    # for clf, title, ax in zip(models, titles, sub.flatten()):
+    #     plot_contours(ax, clf, xx, yy,
+    #                   cmap=plt.cm.coolwarm, alpha=0.8)
+    #     ax.scatter(X0, X1, c=trY, cmap=plt.cm.coolwarm, s=20, edgecolors='k')
+    #     ax.set_xlim(xx.min(), xx.max())
+    #     ax.set_ylim(yy.min(), yy.max())
+    #     ax.set_xlabel('Sepal length')
+    #     ax.set_ylabel('Sepal width')
+    #     ax.set_xticks(())
+    #     ax.set_yticks(())
+    #     ax.set_title(title)
+    #
+    # plt.show()
 

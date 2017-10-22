@@ -223,7 +223,8 @@ def plot_data_and_contours(ax, trainx, trainy, meshstep=0.02):
         # TODO: Want this as: Z = predict_ml_center(np.c_[xx.ravel(), yy.ravel()])
         Z = predict_ml_center(weight_opt, trainx, np.c_[xx.ravel(), yy.ravel()])
         Z = Z.reshape(xx.shape)
-        out = ax.contourf(xx, yy, Z)
+        out = ax.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.8)
+        ax.scatter(trX[:, 0], trX[:, 1], c=trY, cmap=plt.cm.coolwarm, s=60, edgecolors='k')
         return out
     else:
         return "Input sample dimension must be equal to 2. Exiting. "
@@ -288,8 +289,8 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(1, 1)
     # plot_contours(ax, clf, xx, yy, cmap=plt.cm.coolwarm, alpha=0.8)
     # ax = sub.flatten()
-    plot_data_and_contours(ax, trX, trY, meshstep=0.02)
-    ax.scatter(trX[:, 0], trX[:, 1], c=trY, cmap=plt.cm.coolwarm, s=60, edgecolors='k')
+    out = plot_data_and_contours(ax, trX, trY, meshstep=0.02)
+
 
     plt.show()
 

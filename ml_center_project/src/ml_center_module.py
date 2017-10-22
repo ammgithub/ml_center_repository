@@ -104,7 +104,8 @@ def get_label_adjusted_train_kernel(trainx, trainy):
     ------
     ktrain = get_label_adjusted_train_kernel(trainx, trainy)
     """
-    k = pairwise_kernels(X=trX, metric='linear')
+    # k = pairwise_kernels(X=trX, metric='linear')
+    k = pairwise_kernels(X=trainx, metric='poly', degree=3, coef0=1)
     # multiply by labels and add row, same K as in Trafalis Malyscheff, ACM, 2002
     K = np.array([k[i, :] * trY for i in range(len(k[0, :]))])
     K = np.vstack((K, trY))
@@ -127,7 +128,8 @@ def get_label_adjusted_test_kernel(trainx, testx):
     ktest = get_label_adjusted_test_kernel(trainx, testx)
     """
     num_test_samples = testx.shape[0]
-    ktest = pairwise_kernels(X=trainx, Y=testx, metric='linear')
+    # ktest = pairwise_kernels(X=trainx, Y=testx, metric='linear')
+    ktest = pairwise_kernels(X=trainx, Y=testx,  metric='poly', degree=3, coef0=1)
     # add row of ones
     Ktest = np.vstack((ktest, np.ones((1, num_test_samples))))
     return Ktest.T
@@ -291,6 +293,21 @@ if __name__ == '__main__':
     # ax = sub.flatten()
     out = plot_data_and_contours(ax, trX, trY, meshstep=0.02)
 
+    # Testing OR data
+    trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
+    trY = [1, -1, 1, -1]
+    tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    tsY = [1, -1, 1]
+    weight_opt, eps_opt = learn_ml_center(trX, trY)
+    ftestx = predict_ml_center(weight_opt, trX, tsX)
+    print "weight_opt = ", weight_opt
+    print "eps_opt = ", eps_opt
+    print "[ftestx, tsY] = \n", np.array([ftestx, np.array(tsY)]).T
+
+    fig, ax = plt.subplots(1, 1)
+    # plot_contours(ax, clf, xx, yy, cmap=plt.cm.coolwarm, alpha=0.8)
+    # ax = sub.flatten()
+    out = plot_data_and_contours(ax, trX, trY, meshstep=0.02)
 
     plt.show()
 

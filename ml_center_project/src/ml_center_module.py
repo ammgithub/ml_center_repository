@@ -141,14 +141,12 @@ class FastKernelMachine(object):
         c = np.vstack((np.zeros((self.num_train_samples+1, 1)), 1)).flatten()
 
         # Constraints from data (halfspaces)
-        kmat = get_label_adjusted_train_kernel(trainx, trainy)
-        kmat2 = get_label_adjusted_train_kernel2(trainx, trainy,
+        # kmat = get_label_adjusted_train_kernel(trainx, trainy)
+        kmat = get_label_adjusted_train_kernel(trainx, trainy,
                                                 kernel=self.kernel,
                                                 degree=self.degree,
                                                 gamma=self.gamma,
                                                 coef0=self.coef0)
-        print kmat
-        print kmat2
 
         Aub_data = np.hstack((-kmat, -np.ones((self.num_train_samples, 1))))
         bub_data = np.zeros((self.num_train_samples, 1))
@@ -186,14 +184,12 @@ class FastKernelMachine(object):
         -------
         self : object
         """
-        ktest = get_label_adjusted_test_kernel(self.trainx, testx)
-        ktest2 = get_label_adjusted_test_kernel2(self.trainx, testx,
+        # ktest = get_label_adjusted_test_kernel(self.trainx, testx)
+        ktest = get_label_adjusted_test_kernel(self.trainx, testx,
                                                  kernel=self.kernel,
                                                  degree=self.degree,
                                                  gamma=self.gamma,
                                                  coef0=self.coef0)
-        print "ktest = \n", ktest.sum(axis=0)
-        print "\nktest2 = \n", ktest2.sum(axis=0)
         # want printed output on console
         return np.sign(np.dot(ktest, self.weight_opt))
 
@@ -223,7 +219,6 @@ class FastKernelMachine(object):
             testx = np.c_[xx.ravel(), yy.ravel()]
             Z = self.predict(testx)
 
-            # Z = predict_ml_center(weight_opt, trainx, np.c_[xx.ravel(), yy.ravel()])
             Z = Z.reshape(xx.shape)
             out = ax.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.8)
             ax.scatter(self.trainx[:, 0], self.trainx[:, 1], c=self.trainy,
@@ -233,7 +228,7 @@ class FastKernelMachine(object):
             return "Input sample dimension must be equal to 2. Exiting. "
 
 
-def get_label_adjusted_train_kernel2(trainx, trainy, **params):
+def get_label_adjusted_train_kernel(trainx, trainy, **params):
     """
     Compute the training kernel matrix. This matrix also takes labels into consideration.
     The training kernel matrix has l+1 rows and l columns, where l is the number of
@@ -253,7 +248,7 @@ def get_label_adjusted_train_kernel2(trainx, trainy, **params):
 
     Usage:
     ------
-    ktrain = get_label_adjusted_train_kernel2(trainx, trainy, kernel='poly', degree=3, gamma=1, coef0=1)
+    ktrain = get_label_adjusted_train_kernel(trainx, trainy, kernel='poly', degree=3, gamma=1, coef0=1)
     """
     k = pairwise_kernels(X=trainx, metric=params['kernel'],
                          degree=params['degree'], coef0=params['coef0'])
@@ -262,7 +257,7 @@ def get_label_adjusted_train_kernel2(trainx, trainy, **params):
     K = np.vstack((K, trainy))
     return K.T
 
-def get_label_adjusted_test_kernel2(trainx, testx, **params):
+def get_label_adjusted_test_kernel(trainx, testx, **params):
     """
     Compute the test kernel matrix.  The test kernel matrix has l+1 rows and l columns,
     however, the l+1 row has 1s, not the labels yj. Columns are not multiplied by yj.
@@ -288,54 +283,6 @@ def get_label_adjusted_test_kernel2(trainx, testx, **params):
     Ktest = np.vstack((ktest, np.ones((1, num_test_samples))))
     return Ktest.T
 
-def get_label_adjusted_train_kernel(trainx, trainy):
-    """
-    Compute the training kernel matrix. This matrix also takes labels into consideration.
-    The training kernel matrix has l+1 rows and l columns, where l is the number of
-    samples in trainx and trainy.
-    All columns are multiplied by the corresponding yj.  This implies that the l+1 row
-    contains yj's.  Corresponds to K.T from Trafalis, Malyscheff, ACM, 2002.
-
-    Parameters
-    ----------
-    In    : trainx, input samples for training set (d by l)
-            trainy, labels for training set (d by 1) (flattened)
-    Out   : ktrain
-
-    Usage:
-    ------
-    ktrain = get_label_adjusted_train_kernel(trainx, trainy)
-    """
-    k = pairwise_kernels(X=trainx, metric='poly',
-                         degree=3, coef0=1)
-    # multiply by labels and add row, same K as in Trafalis Malyscheff, ACM, 2002
-    K = np.array([k[i, :] * trainy for i in range(len(k[0, :]))])
-    K = np.vstack((K, trainy))
-    return K.T
-
-def get_label_adjusted_test_kernel(trainx, testx):
-    """
-    Compute the test kernel matrix.  The test kernel matrix has l+1 rows and l columns,
-    however, the l+1 row has 1s, not the labels yj. Columns are not multiplied by yj.
-
-    Parameters
-    ----------
-    In    : trainx, input samples for training set (d by l)
-            testx, input samples for test set (d by num_test_samples)
-    Out   : ktrain
-
-    Usage:
-    ------
-    ktest = get_label_adjusted_test_kernel(trainx, testx)
-    """
-    num_test_samples = testx.shape[0]
-    # ktest = pairwise_kernels(X=trainx, Y=testx, metric='linear')
-    ktest = pairwise_kernels(X=trainx, Y=testx,  metric='poly', degree=3, coef0=1)
-    # add row of ones
-    Ktest = np.vstack((ktest, np.ones((1, num_test_samples))))
-    return Ktest.T
-
-
 if __name__ == '__main__':
     """
     execfile('ml_center_module.py')
@@ -347,18 +294,18 @@ if __name__ == '__main__':
 
     print "\n Now let's do that again with an object... \n"
     # Testing OR data
-    # trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-    # trY = [1, -1, 1, -1]
-    # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
-    # tsY = [1, -1, 1]
-    # Testing AND data
     trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-    trY = [1, -1, -1, -1]
+    trY = [1, -1, 1, -1]
     tsX = np.array([[1, 2], [-3, 2], [6, -1]])
     tsY = [1, -1, 1]
+    # Testing AND data
+    # trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
+    # trY = [1, -1, -1, -1]
+    # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    # tsY = [1, -1, 1]
     fkm = FastKernelMachine(kernel='poly', degree=2, gamma=1, coef0=1)
     fkm.fit(trX, trY)
     fkm.predict(tsX)
-    fkm.plot2d(0.5)
+    fkm.plot2d(0.02)
 
 

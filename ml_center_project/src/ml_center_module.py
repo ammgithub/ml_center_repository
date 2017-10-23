@@ -317,7 +317,7 @@ if __name__ == '__main__':
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
     print "\n Now let's do that again with an object... \n"
-    print "\n Test..."    
+    print "\n Test 2..."
     # Testing OR data
     trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
     trY = [1, -1, 1, -1]

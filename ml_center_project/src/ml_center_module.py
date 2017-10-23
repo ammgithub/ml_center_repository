@@ -329,11 +329,11 @@ if __name__ == '__main__':
     # tsY = [1, -1, 1]
     fkm = FastKernelMachine(kernel='poly', degree=2, gamma=4, coef0=1)
     fkm.fit(trX, trY)
-    fkm.predict(tsX)
+    print fkm.predict(tsX)
     fkm.plot2d(0.02)
 
     fkm = FastKernelMachine(kernel='rbf', degree=1, gamma=0.5, coef0=0)
     fkm.fit(trX, trY)
-    fkm.predict(tsX)
+    print fkm.predict(tsX)
     fkm.plot2d(0.02)
 

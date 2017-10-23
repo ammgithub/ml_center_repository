@@ -223,6 +223,7 @@ class FastKernelMachine(object):
             out = ax.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.8)
             ax.scatter(self.trainx[:, 0], self.trainx[:, 1], c=self.trainy,
                        cmap=plt.cm.coolwarm, s=60, edgecolors='k')
+            plt.grid()
             plt.show()
         else:
             return "Input sample dimension must be equal to 2. Exiting. "
@@ -250,8 +251,19 @@ def get_label_adjusted_train_kernel(trainx, trainy, **params):
     ------
     ktrain = get_label_adjusted_train_kernel(trainx, trainy, kernel='poly', degree=3, gamma=1, coef0=1)
     """
-    k = pairwise_kernels(X=trainx, metric=params['kernel'],
-                         degree=params['degree'], coef0=params['coef0'])
+    # TODO: more elegant: what are the **kwds in pairwise_kernels()?
+    if params['kernel'] == 'linear':
+        k = pairwise_kernels(X=trainx, metric=params['kernel'])
+    elif params['kernel'] == 'poly':
+        k = pairwise_kernels(X=trainx, metric=params['kernel'],
+                             gamma=params['gamma'], degree=params['degree'],
+                             coef0=params['coef0'])
+    elif params['kernel'] == 'rbf':
+        k = pairwise_kernels(X=trainx, metric=params['kernel'],
+                             gamma=params['gamma'])
+    else:
+        raise ValueError('Please check the selected kernel (\'%s\'). '
+                         'Exiting.' %params['kernel'])
     # multiply by labels and add row, same K as in Trafalis Malyscheff, ACM, 2002
     K = np.array([k[i, :] * trainy for i in range(len(k[0, :]))])
     K = np.vstack((K, trainy))
@@ -277,8 +289,21 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
     ktest = get_label_adjusted_test_kernel(trainx, testx)
     """
     num_test_samples = testx.shape[0]
-    ktest = pairwise_kernels(X=trainx, Y=testx,  metric=params['kernel'],
-                             degree=params['degree'], coef0=params['coef0'])
+
+    # TODO: more elegant: what are the **kwds in pairwise_kernels()?
+    if params['kernel'] == 'linear':
+        ktest = pairwise_kernels(X=trainx, Y=testx, metric=params['kernel'])
+    elif params['kernel'] == 'poly':
+        ktest = pairwise_kernels(X=trainx, Y=testx, metric=params['kernel'],
+                                 gamma=params['gamma'], degree=params['degree'],
+                                 coef0=params['coef0'])
+    elif params['kernel'] == 'rbf':
+        ktest = pairwise_kernels(X=trainx, Y=testx, metric=params['kernel'],
+                                 gamma=params['gamma'])
+    else:
+        raise ValueError('Please check the selected kernel (\'%s\'). '
+                         'Exiting.' %params['kernel'])
+
     # add row of ones
     Ktest = np.vstack((ktest, np.ones((1, num_test_samples))))
     return Ktest.T
@@ -289,7 +314,6 @@ if __name__ == '__main__':
     springer thank you: thankyou1710
     """
     import os
-
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
     print "\n Now let's do that again with an object... \n"
@@ -303,9 +327,13 @@ if __name__ == '__main__':
     # trY = [1, -1, -1, -1]
     # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
     # tsY = [1, -1, 1]
-    fkm = FastKernelMachine(kernel='poly', degree=2, gamma=1, coef0=1)
+    fkm = FastKernelMachine(kernel='poly', degree=2, gamma=4, coef0=1)
     fkm.fit(trX, trY)
     fkm.predict(tsX)
     fkm.plot2d(0.02)
 
+    fkm = FastKernelMachine(kernel='rbf', degree=1, gamma=0.5, coef0=0)
+    fkm.fit(trX, trY)
+    fkm.predict(tsX)
+    fkm.plot2d(0.02)
 

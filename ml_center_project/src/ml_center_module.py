@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import warnings
 
 np.set_printoptions(linewidth=100, edgeitems='all', suppress=True,
-                    precision=2)
+                    precision=4)
 
 
 class ThisSVC(object):
@@ -81,7 +81,21 @@ class ThisSVC(object):
 
 class FastKernelMachine(object):
     """
-    A very fast kernel machine
+    A very fast kernel machine.
+
+    The following kernels are employed:
+
+    'linear'
+    --------
+    k(u, v) = u*v
+
+    'poly'
+    ------
+    k(u, v) = ( \gamma*u*v + coef0 )^degree
+
+    'rbf'
+    -----
+    k(u, v) = exp (-gamma*||u - v||^2)
 
     Parameters
     ----------
@@ -93,9 +107,11 @@ class FastKernelMachine(object):
 
     gamma : int, (default=1)
     For radial-basis function kernels. gamma = 1 / 2 sigma^2.
+    For polynomial kernels. gamma is a multiplier of u*v.
 
     coef0 : float, (default=0.0)
-    For poly and sigmoid kernels only.
+    For polynomial (and sigmoid) kernels only.
+    For polynomial kernels coef0 is a bias added to u*v
 
     Examples
     --------
@@ -217,10 +233,10 @@ class FastKernelMachine(object):
         self : object
         """
         if self.trainx.shape[1] == 2:
-            xmin = self.trainx[:, 0].min() - 1
-            xmax = self.trainx[:, 0].max() + 1
-            ymin = self.trainx[:, 1].min() - 1
-            ymax = self.trainx[:, 1].max() + 1
+            xmin = self.trainx[:, 0].min() - 3
+            xmax = self.trainx[:, 0].max() + 3
+            ymin = self.trainx[:, 1].min() - 3
+            ymax = self.trainx[:, 1].max() + 3
             xx, yy = np.meshgrid(np.arange(xmin, xmax + meshstep, meshstep),
                                  np.arange(ymin, ymax + meshstep, meshstep))
 
@@ -326,18 +342,55 @@ if __name__ == '__main__':
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
     # Testing OR data
-    trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-    trY = [1, -1, 1, -1]
-    tsX = np.array([[1, 2], [-3, 2], [6, -1]])
-    tsY = [1, -1, 1]
+    # print "Testing OR:"
+    # trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
+    # trY = [1, -1, 1, -1]
+    # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    # tsY = [1, -1, 1]
     # Testing AND data
+    # print "Testing AND:"
     # trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
     # trY = [1, -1, -1, -1]
     # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
     # tsY = [1, -1, 1]
+    # Testing CIRCLE data
+    print "\nTesting CIRCLE:"
+    trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2]])
+    trY = [1, 1, 1, 1, -1, -1, -1]
+    tsX = np.array([[0, 2], [3, 3], [6, 3]])
+    tsY = [1, -1, 1]
 
-    # kernel = 'poly'
-    # degree = 2
+    kernel = 'rbf'
+    degree = 2
+    gamma = 1
+    coef0 = 1
+    print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
+    print "-----------------------------------------------------"
+
+    fkm = FastKernelMachine(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    fkm.fit(trX, trY)
+    print "(fkm.weight_opt, fkm.eps_opt) = ", (fkm.weight_opt, fkm.eps_opt)
+    ftest = fkm.predict(tsX)
+    print "fkm.predict(tsX) = \n", ftest
+    print "tsY = \n", tsY
+    if not (abs(ftest - tsY) <= 0.001).all():
+        print "*** Test set not classified correctly. ***"
+    ftest = fkm.predict(trX)
+    print "fkm.predict(trX) = \n", ftest
+    print "trY = \n", trY
+    if not (abs(ftest - trY) <= 0.001).all():
+        print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+    fkm.plot2d(0.02)
+
+    # # Testing iris columns [i, j] using only labels (0, 1), not label 2
+    # iris = datasets.load_iris()
+    # # trX = iris.data[:100, [0, 1]]
+    # trX = iris.data[:100, :]
+    # trY = iris.target[:100]
+    # trY = [i if i==1 else -1 for i in trY]
+    #
+    # kernel = 'linear'
+    # degree = 1
     # gamma = 1
     # coef0 = 1
     # print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
@@ -351,29 +404,27 @@ if __name__ == '__main__':
     # print "trY = ", trY
     # if not (abs(ftest - trY) <= 0.001).all():
     #     print "*** Training set not classified correctly. ***"
-    # fkm.plot2d(2.0)
+    # fkm.plot2d(0.02)
 
-    # Testing iris columns [i, j] using only labels (0, 1), not label 2
-    iris = datasets.load_iris()
-    # trX = iris.data[:100, [0, 1]]
-    trX = iris.data[:100, :]
-    trY = iris.target[:100]
-    trY = [i if i==1 else -1 for i in trY]
-
-    kernel = 'linear'
-    degree = 1
-    gamma = 1
-    coef0 = 1
-    print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
-    print "-----------------------------------------------------"
-
-    fkm = FastKernelMachine(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
-    fkm.fit(trX, trY)
-    print "(fkm.weight_opt, fkm.eps_opt) = ", (fkm.weight_opt, fkm.eps_opt)
-    ftest = fkm.predict(trX)
-    print "fkm.predict(trX) = ", ftest
-    print "trY = ", trY
-    if not (abs(ftest - trY) <= 0.001).all():
-        print "*** Training set not classified correctly. ***"
-    fkm.plot2d(0.02)
-
+    # # Testing two-category breast cancer data
+    # bc_data = datasets.load_breast_cancer()
+    # trX = bc_data.data
+    # trY = bc_data.target
+    # trY = np.array([i if i == 1 else -1 for i in trY])
+    #
+    # kernel = 'poly'
+    # degree = 4
+    # gamma = 1
+    # coef0 = 1
+    # print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
+    # print "-----------------------------------------------------"
+    #
+    # fkm = FastKernelMachine(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    # fkm.fit(trX, trY)
+    # print "(fkm.weight_opt, fkm.eps_opt) = ", (fkm.weight_opt, fkm.eps_opt)
+    # ftest = fkm.predict(trX)
+    # print "fkm.predict(trX) = ", ftest
+    # print "trY = ", trY
+    # if not (abs(ftest - trY) <= 0.001).all():
+    #     print "*** Training set not classified correctly. ***"
+    # fkm.plot2d(0.02)

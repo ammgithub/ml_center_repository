@@ -346,4 +346,3 @@ if __name__ == '__main__':
     fkm = FastKernelMachine(kernel='poly', degree=5, gamma=1, coef0=0)
     fkm.fit(trX, trY)
     fkm.plot2d(0.02)
-

@@ -328,13 +328,22 @@ if __name__ == '__main__':
     # trY = [1, -1, -1, -1]
     # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
     # tsY = [1, -1, 1]
-    fkm = FastKernelMachine(kernel='poly', degree=2, gamma=4, coef0=1)
-    fkm.fit(trX, trY)
-    print fkm.predict(tsX)
-    fkm.plot2d(0.02)
+##    fkm = FastKernelMachine(kernel='poly', degree=2, gamma=4, coef0=1)
+##    fkm.fit(trX, trY)
+##    print fkm.predict(tsX)
+##    fkm.plot2d(0.02)
+##
+##    fkm = FastKernelMachine(kernel='rbf', degree=1, gamma=0.5, coef0=0)
+##    fkm.fit(trX, trY)
+##    print fkm.predict(tsX)
+##    fkm.plot2d(0.02)
 
-    fkm = FastKernelMachine(kernel='rbf', degree=1, gamma=0.5, coef0=0)
+    # Testing iris column (1, 2) label (0, 1)
+    iris = datasets.load_iris()
+    trX = iris.data[:100, [0, 1]]
+    trY = iris.target[:100]
+    trY = [i if i==1 else -1 for i in trY]
+    fkm = FastKernelMachine(kernel='poly', degree=5, gamma=1, coef0=0)
     fkm.fit(trX, trY)
-    print fkm.predict(tsX)
     fkm.plot2d(0.02)
-
+    

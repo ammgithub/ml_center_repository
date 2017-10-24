@@ -13,6 +13,7 @@ from scipy.optimize import linprog as lp
 from sklearn import svm, datasets
 from sklearn.metrics.pairwise import pairwise_kernels
 import matplotlib.pyplot as plt
+import warnings
 
 np.set_printoptions(linewidth=100, edgeitems='all', suppress=True,
                     precision=2)
@@ -148,6 +149,8 @@ class FastKernelMachine(object):
                                                 gamma=self.gamma,
                                                 coef0=self.coef0)
 
+        # print "self.trainx = \n", self.trainx
+        # print "kmat = \n", kmat
         Aub_data = np.hstack((-kmat, -np.ones((self.num_train_samples, 1))))
         bub_data = np.zeros((self.num_train_samples, 1))
 
@@ -170,6 +173,8 @@ class FastKernelMachine(object):
         # last element is epsilon
         self.weight_opt = weight_opt[:-1]
         self.eps_opt = res.fun
+        if np.abs(self.eps_opt) <= 0.00001:
+            warnings.warn('\neps_opt is close to zero. Data not separable. ')
 
     def predict(self, testx):
         """
@@ -184,12 +189,16 @@ class FastKernelMachine(object):
         -------
         self : object
         """
-        # ktest = get_label_adjusted_test_kernel(self.trainx, testx)
+        if np.abs(self.eps_opt) <= 0.00001:
+            warnings.warn('\neps_opt is close to zero. Data not separable. ')
         ktest = get_label_adjusted_test_kernel(self.trainx, testx,
                                                  kernel=self.kernel,
                                                  degree=self.degree,
                                                  gamma=self.gamma,
                                                  coef0=self.coef0)
+        # print "self.trainx = \n", self.trainx
+        # print "testx = \n", testx
+        # print "ktest = \n", ktest
         # want printed output on console
         return np.sign(np.dot(ktest, self.weight_opt))
 
@@ -245,29 +254,29 @@ def get_label_adjusted_train_kernel(trainx, trainy, **params):
                         degree,
                         gamma,
                         coef0}
-    Out   : ktrain
+    Out   : Ktrain.T
 
     Usage:
     ------
-    ktrain = get_label_adjusted_train_kernel(trainx, trainy, kernel='poly', degree=3, gamma=1, coef0=1)
+    Ktrain = get_label_adjusted_train_kernel(trainx, trainy, kernel='poly', degree=3, gamma=1, coef0=1)
     """
     # TODO: more elegant: what are the **kwds in pairwise_kernels()?
     if params['kernel'] == 'linear':
-        k = pairwise_kernels(X=trainx, metric=params['kernel'])
+        ktrain = pairwise_kernels(X=trainx, metric=params['kernel'])
     elif params['kernel'] == 'poly':
-        k = pairwise_kernels(X=trainx, metric=params['kernel'],
+        ktrain = pairwise_kernels(X=trainx, metric=params['kernel'],
                              gamma=params['gamma'], degree=params['degree'],
                              coef0=params['coef0'])
     elif params['kernel'] == 'rbf':
-        k = pairwise_kernels(X=trainx, metric=params['kernel'],
+        ktrain = pairwise_kernels(X=trainx, metric=params['kernel'],
                              gamma=params['gamma'])
     else:
         raise ValueError('Please check the selected kernel (\'%s\'). '
                          'Exiting.' %params['kernel'])
     # multiply by labels and add row, same K as in Trafalis Malyscheff, ACM, 2002
-    K = np.array([k[i, :] * trainy for i in range(len(k[0, :]))])
-    K = np.vstack((K, trainy))
-    return K.T
+    Ktrain = np.array([ktrain[i, :] * trainy for i in range(len(ktrain[0, :]))])
+    Ktrain = np.vstack((Ktrain, trainy))
+    return Ktrain.T
 
 def get_label_adjusted_test_kernel(trainx, testx, **params):
     """
@@ -282,11 +291,11 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
                         degree,
                         gamma,
                         coef0}
-    Out   : ktrain
+    Out   : Ktest.T
 
     Usage:
     ------
-    ktest = get_label_adjusted_test_kernel(trainx, testx)
+    Ktest = get_label_adjusted_test_kernel(trainx, testx)
     """
     num_test_samples = testx.shape[0]
 
@@ -316,8 +325,6 @@ if __name__ == '__main__':
     import os
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
-    print "\n Now let's do that again with an object... \n"
-    print "\n Test 3..."
     # Testing OR data
     trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
     trY = [1, -1, 1, -1]
@@ -328,21 +335,45 @@ if __name__ == '__main__':
     # trY = [1, -1, -1, -1]
     # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
     # tsY = [1, -1, 1]
-##    fkm = FastKernelMachine(kernel='poly', degree=2, gamma=4, coef0=1)
-##    fkm.fit(trX, trY)
-##    print fkm.predict(tsX)
-##    fkm.plot2d(0.02)
-##
-##    fkm = FastKernelMachine(kernel='rbf', degree=1, gamma=0.5, coef0=0)
-##    fkm.fit(trX, trY)
-##    print fkm.predict(tsX)
-##    fkm.plot2d(0.02)
 
-    # Testing iris column (1, 2) label (0, 1)
+    # kernel = 'poly'
+    # degree = 2
+    # gamma = 1
+    # coef0 = 1
+    # print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
+    # print "-----------------------------------------------------"
+    #
+    # fkm = FastKernelMachine(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    # fkm.fit(trX, trY)
+    # print "(fkm.weight_opt, fkm.eps_opt) = ", (fkm.weight_opt, fkm.eps_opt)
+    # ftest = fkm.predict(trX)
+    # print "fkm.predict(trX) = ", ftest
+    # print "trY = ", trY
+    # if not (abs(ftest - trY) <= 0.001).all():
+    #     print "*** Training set not classified correctly. ***"
+    # fkm.plot2d(2.0)
+
+    # Testing iris columns [i, j] using only labels (0, 1), not label 2
     iris = datasets.load_iris()
-    trX = iris.data[:100, [0, 1]]
+    # trX = iris.data[:100, [0, 1]]
+    trX = iris.data[:100, :]
     trY = iris.target[:100]
     trY = [i if i==1 else -1 for i in trY]
-    fkm = FastKernelMachine(kernel='poly', degree=5, gamma=1, coef0=0)
+
+    kernel = 'linear'
+    degree = 1
+    gamma = 1
+    coef0 = 1
+    print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
+    print "-----------------------------------------------------"
+
+    fkm = FastKernelMachine(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
     fkm.fit(trX, trY)
+    print "(fkm.weight_opt, fkm.eps_opt) = ", (fkm.weight_opt, fkm.eps_opt)
+    ftest = fkm.predict(trX)
+    print "fkm.predict(trX) = ", ftest
+    print "trY = ", trY
+    if not (abs(ftest - trY) <= 0.001).all():
+        print "*** Training set not classified correctly. ***"
     fkm.plot2d(0.02)
+

@@ -4,9 +4,6 @@ Created on October 18, 2017
 Machine learning and another center (other than the analytic center)
 
 """
-__author__ = 'amm'
-__date__ = "Oct 18, 2017"
-__version__ = 0.0
 
 import numpy as np
 from scipy.optimize import linprog as lp
@@ -14,6 +11,10 @@ from sklearn import svm, datasets
 from sklearn.metrics.pairwise import pairwise_kernels
 import matplotlib.pyplot as plt
 import warnings
+
+__author__ = 'amm'
+__date__ = "Oct 18, 2017"
+__version__ = 0.0
 
 np.set_printoptions(linewidth=100, edgeitems='all', suppress=True,
                     precision=4)
@@ -79,7 +80,7 @@ class ThisSVC(object):
         self.predY = predY
 
 
-class FastKernelMachine(object):
+class FastKernelClassifier(object):
     """
     A very fast kernel machine.
 
@@ -115,8 +116,8 @@ class FastKernelMachine(object):
 
     Examples
     --------
-    >>> fkm = FastKernelMachine()
-    >>> fkm = FastKernelMachine(kernel='poly', degree=3, gamma=1, coef0=1)
+    >>> fkc = FastKernelClassifier()
+    >>> fkc = FastKernelClassifier(kernel='poly', degree=3, gamma=1, coef0=1)
 
     Notes
     -----
@@ -368,20 +369,20 @@ if __name__ == '__main__':
     # print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
     # print "-----------------------------------------------------"
     #
-    # fkm = FastKernelMachine(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
-    # fkm.fit(trX, trY)
-    # print "(fkm.weight_opt, fkm.eps_opt) = ", (fkm.weight_opt, fkm.eps_opt)
-    # ftest = fkm.predict(tsX)
-    # print "fkm.predict(tsX) = \n", ftest
+    # fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    # fkc.fit(trX, trY)
+    # print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+    # ftest = fkc.predict(tsX)
+    # print "fkc.predict(tsX) = \n", ftest
     # print "tsY = \n", tsY
     # if not (abs(ftest - tsY) <= 0.001).all():
     #     print "*** Test set not classified correctly. ***"
-    # ftest = fkm.predict(trX)
-    # print "fkm.predict(trX) = \n", ftest
+    # ftest = fkc.predict(trX)
+    # print "fkc.predict(trX) = \n", ftest
     # print "trY = \n", trY
     # if not (abs(ftest - trY) <= 0.001).all():
     #     print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-    # fkm.plot2d(0.02)
+    # fkc.plot2d(0.02)
 
     # Running IRIS
     # iris = datasets.load_iris()
@@ -397,15 +398,15 @@ if __name__ == '__main__':
     # print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
     # print "-----------------------------------------------------"
     #
-    # fkm = FastKernelMachine(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
-    # fkm.fit(trX, trY)
-    # print "(fkm.weight_opt, fkm.eps_opt) = ", (fkm.weight_opt, fkm.eps_opt)
-    # ftest = fkm.predict(trX)
-    # print "fkm.predict(trX) = ", ftest
+    # fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    # fkc.fit(trX, trY)
+    # print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+    # ftest = fkc.predict(trX)
+    # print "fkc.predict(trX) = ", ftest
     # print "trY = ", trY
     # if not (abs(ftest - trY) <= 0.001).all():
     #     print "*** Training set not classified correctly. ***"
-    # fkm.plot2d(0.02)
+    # fkc.plot2d(0.02)
 
     # Running BREAST CANCER
     bc_data = datasets.load_breast_cancer()
@@ -420,12 +421,12 @@ if __name__ == '__main__':
     print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
     print "-----------------------------------------------------"
 
-    fkm = FastKernelMachine(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
-    fkm.fit(trX, trY)
-    print "(fkm.weight_opt, fkm.eps_opt) = ", (fkm.weight_opt, fkm.eps_opt)
-    ftest = fkm.predict(trX)
-    print "fkm.predict(trX) = \n", ftest
+    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    fkc.fit(trX, trY)
+    print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+    ftest = fkc.predict(trX)
+    print "fkc.predict(trX) = \n", ftest
     print "trY = \n", trY
     if not (abs(ftest - trY) <= 0.001).all():
         print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-    fkm.plot2d(0.02)
+    fkc.plot2d(0.02)

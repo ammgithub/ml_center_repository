@@ -249,6 +249,12 @@ class FastKernelClassifier(object):
             out = ax.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.8)
             ax.scatter(self.trainx[:, 0], self.trainx[:, 1], c=self.trainy,
                        cmap=plt.cm.coolwarm, s=60, edgecolors='k')
+            ax.set_xlabel('trainx[:, 0] - Attribute 1')
+            ax.set_ylabel('trainx[:, 1] - Attribute 2')
+            title_string = "Training data and decision surface for: \nKernel = %s, " \
+                           "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" %(
+                self.kernel, self.degree, self.gamma, self.coef0)
+            ax.set_title(title_string)
             plt.grid()
             plt.show()
         else:
@@ -342,19 +348,19 @@ if __name__ == '__main__':
     import os
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
-    # Testing OR data
+    # Include a small dataset to run module: OR problem
     # print "Testing OR:"
     # trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
     # trY = [1, -1, 1, -1]
     # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
     # tsY = [1, -1, 1]
     # Testing AND data
-    # print "Testing AND:"
-    # trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-    # trY = [1, -1, -1, -1]
-    # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
-    # tsY = [1, -1, 1]
-    # Testing CIRCLE data
+    print "Testing AND:"
+    trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
+    trY = [1, -1, -1, -1]
+    tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    tsY = [1, -1, 1]
+    # # Testing CIRCLE data
     # print "\nTesting CIRCLE:"
     # trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2]])
     # trY = [1, 1, 1, 1, -1, -1, -1]
@@ -362,27 +368,27 @@ if __name__ == '__main__':
     # tsY = [1, -1, 1]
 
     # Running OR, AND, and CIRCLE
-    # kernel = 'rbf'
-    # degree = 2
-    # gamma = 1
-    # coef0 = 1
-    # print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
-    # print "-----------------------------------------------------"
-    #
-    # fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
-    # fkc.fit(trX, trY)
-    # print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
-    # ftest = fkc.predict(tsX)
-    # print "fkc.predict(tsX) = \n", ftest
-    # print "tsY = \n", tsY
-    # if not (abs(ftest - tsY) <= 0.001).all():
-    #     print "*** Test set not classified correctly. ***"
-    # ftest = fkc.predict(trX)
-    # print "fkc.predict(trX) = \n", ftest
-    # print "trY = \n", trY
-    # if not (abs(ftest - trY) <= 0.001).all():
-    #     print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-    # fkc.plot2d(0.02)
+    kernel = 'rbf'
+    degree = 2
+    gamma = 1
+    coef0 = 1
+    print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
+    print "-----------------------------------------------------"
+
+    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    fkc.fit(trX, trY)
+    print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+    ftest = fkc.predict(tsX)
+    print "fkc.predict(tsX) = \n", ftest
+    print "tsY = \n", tsY
+    if not (abs(ftest - tsY) <= 0.001).all():
+        print "*** Test set not classified correctly. ***"
+    ftest = fkc.predict(trX)
+    print "fkc.predict(trX) = \n", ftest
+    print "trY = \n", trY
+    if not (abs(ftest - trY) <= 0.001).all():
+        print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+    fkc.plot2d(0.02)
 
     # Running IRIS
     # iris = datasets.load_iris()
@@ -408,25 +414,25 @@ if __name__ == '__main__':
     #     print "*** Training set not classified correctly. ***"
     # fkc.plot2d(0.02)
 
-    # Running BREAST CANCER
-    bc_data = datasets.load_breast_cancer()
-    trX = bc_data.data
-    trY = bc_data.target
-    trY = np.array([i if i == 1 else -1 for i in trY])
-
-    kernel = 'rbf'
-    degree = 4
-    gamma = 1.0
-    coef0 = 1
-    print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
-    print "-----------------------------------------------------"
-
-    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
-    fkc.fit(trX, trY)
-    print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
-    ftest = fkc.predict(trX)
-    print "fkc.predict(trX) = \n", ftest
-    print "trY = \n", trY
-    if not (abs(ftest - trY) <= 0.001).all():
-        print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-    fkc.plot2d(0.02)
+    # # Running BREAST CANCER
+    # bc_data = datasets.load_breast_cancer()
+    # trX = bc_data.data
+    # trY = bc_data.target
+    # trY = np.array([i if i == 1 else -1 for i in trY])
+    #
+    # kernel = 'rbf'
+    # degree = 4
+    # gamma = 1.0
+    # coef0 = 1
+    # print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"%(kernel, degree, gamma, coef0)
+    # print "-----------------------------------------------------"
+    #
+    # fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    # fkc.fit(trX, trY)
+    # print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+    # ftest = fkc.predict(trX)
+    # print "fkc.predict(trX) = \n", ftest
+    # print "trY = \n", trY
+    # if not (abs(ftest - trY) <= 0.001).all():
+    #     print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+    # fkc.plot2d(0.02)

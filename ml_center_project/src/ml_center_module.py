@@ -7,7 +7,7 @@ Machine learning and another center (other than the analytic center)
 
 import numpy as np
 from scipy.optimize import linprog as lp
-from sklearn import svm, datasets
+from sklearn import svm
 from sklearn.metrics.pairwise import pairwise_kernels
 import matplotlib.pyplot as plt
 import warnings
@@ -173,10 +173,10 @@ class FastKernelClassifier(object):
         # Constraints from data (halfspaces)
         # kmat = get_label_adjusted_train_kernel(trainx, trainy)
         kmat = get_label_adjusted_train_kernel(trainx, trainy,
-                                                kernel=self.kernel,
-                                                degree=self.degree,
-                                                gamma=self.gamma,
-                                                coef0=self.coef0)
+                                               kernel=self.kernel,
+                                               degree=self.degree,
+                                               gamma=self.gamma,
+                                               coef0=self.coef0)
 
         # print "self.trainx = \n", self.trainx
         # print "kmat = \n", kmat
@@ -221,10 +221,10 @@ class FastKernelClassifier(object):
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
         ktest = get_label_adjusted_test_kernel(self.trainx, testx,
-                                                 kernel=self.kernel,
-                                                 degree=self.degree,
-                                                 gamma=self.gamma,
-                                                 coef0=self.coef0)
+                                               kernel=self.kernel,
+                                               degree=self.degree,
+                                               gamma=self.gamma,
+                                               coef0=self.coef0)
         # print "self.trainx = \n", self.trainx
         # print "testx = \n", testx
         # print "ktest = \n", ktest
@@ -300,11 +300,11 @@ def get_label_adjusted_train_kernel(trainx, trainy, **params):
         ktrain = pairwise_kernels(X=trainx, metric=params['kernel'])
     elif params['kernel'] == 'poly':
         ktrain = pairwise_kernels(X=trainx, metric=params['kernel'],
-                             gamma=params['gamma'], degree=params['degree'],
-                             coef0=params['coef0'])
+                                  gamma=params['gamma'], degree=params['degree'],
+                                  coef0=params['coef0'])
     elif params['kernel'] == 'rbf':
         ktrain = pairwise_kernels(X=trainx, metric=params['kernel'],
-                             gamma=params['gamma'])
+                                  gamma=params['gamma'])
     else:
         raise ValueError('Please check the selected kernel (\'%s\'). '
                          'Exiting.' %params['kernel'])

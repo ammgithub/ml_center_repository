@@ -178,6 +178,7 @@ class FastKernelClassifier(object):
                                                gamma=self.gamma,
                                                coef0=self.coef0)
 
+        self.kmat = kmat
         # print "self.trainx = \n", self.trainx
         # print "kmat = \n", kmat
         Aub_data = np.hstack((-kmat, -np.ones((self.num_train_samples, 1))))
@@ -258,14 +259,15 @@ class FastKernelClassifier(object):
             Z = self.predict(testx)
 
             Z = Z.reshape(xx.shape)
+            # colormap is coolwarm
             out = ax.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.8)
             ax.scatter(self.trainx[:, 0], self.trainx[:, 1], c=self.trainy,
                        cmap=plt.cm.coolwarm, s=60, edgecolors='k')
             ax.set_xlabel('trainx[:, 0] - Attribute 1')
             ax.set_ylabel('trainx[:, 1] - Attribute 2')
-            title_string = "Training data and decision surface for: \nKernel = %s, " \
-                           "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" %(
-                self.kernel, self.degree, self.gamma, self.coef0)
+            title_string = "FKC - Training data and decision surface for: \nKernel = %s, " \
+                           "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" % (
+                            self.kernel, self.degree, self.gamma, self.coef0)
             ax.set_title(title_string)
             plt.grid()
             plt.show()

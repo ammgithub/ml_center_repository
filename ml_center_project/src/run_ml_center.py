@@ -10,6 +10,7 @@ from ml_center_module import FastKernelClassifier
 from sklearn import datasets
 from sklearn.preprocessing import MinMaxScaler
 from time import time
+import pickle
 
 __author__ = 'amm'
 __date__ = "Oct 25, 2017"
@@ -28,13 +29,13 @@ if __name__ == '__main__':
     print 80 * "-"
     print 18 * " " + "Machine learning center tests (2-class separation)"
     print 80 * "-"
-    print 2 * " " + "(1) Testing OR problem"
-    print 2 * " " + "(2) Testing AND problem"
-    print 2 * " " + "(3) Testing 2-dimensional circular data"
-    print 2 * " " + "(4) IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
-    print 2 * " " + "(5) IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
-    print 2 * " " + "(6) BREAST CANCER dataset Testing (all samples)"
-    print 2 * " " + "(7) Computing generalization error for BREAST CANCER dataset (100 experiments)"
+    print 2 * " " + "(1) FKC: Testing OR problem"
+    print 2 * " " + "(2) FKC: Testing AND problem"
+    print 2 * " " + "(3) FKC: Testing 2-dimensional circular data"
+    print 2 * " " + "(4) FKC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
+    print 2 * " " + "(5) FKC: IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
+    print 2 * " " + "(6) FKC: BREAST CANCER dataset Testing (all samples)"
+    print 2 * " " + "(7) FKC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
     print 80 * "-"
 
     bad_input = True
@@ -46,15 +47,16 @@ if __name__ == '__main__':
             print "%s is not a valid selection. Please try again. "\
                   % e.args[0].split(':')[1]
 
+    print "\n\n"
     if user_in == 1:
-        print "(1) Testing OR problem \n"
+        print "(1) FKC: Testing OR problem \n"
         # Testing OR
         trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
         trY = [1, -1, 1, -1]
         tsX = np.array([[1, 2], [-3, 2], [6, -1]])
         tsY = [1, -1, 1]
 
-        kernel = 'rbf'; degree = 2; gamma = 1; coef0 = 1
+        kernel = 'rbf'; degree = 1; gamma = 1; coef0 = 1
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
               % (kernel, degree, gamma, coef0)
         print "-----------------------------------------------------"
@@ -75,14 +77,14 @@ if __name__ == '__main__':
             print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
         fkc.plot2d(0.02)
     elif user_in == 2:
-        print "(2) Testing AND problem \n"
+        print "(2) FKC: Testing AND problem \n"
         # Testing AND
         trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
         trY = [1, -1, -1, -1]
         tsX = np.array([[1, 2], [-3, 2], [6, -1]])
         tsY = [1, -1, 1]
 
-        kernel = 'rbf'; degree = 1; gamma = 1; coef0 = 1
+        kernel = 'poly'; degree = 5; gamma = 1; coef0 = 1
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
               % (kernel, degree, gamma, coef0)
         print "-----------------------------------------------------"
@@ -103,7 +105,7 @@ if __name__ == '__main__':
             print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
         fkc.plot2d(0.02)
     elif user_in == 3:
-        print "(3) Testing 2-dimensional circular data \n"
+        print "(3) FKC: Testing 2-dimensional circular data \n"
         # Testing CIRCLE
         trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2]])
         trY = [1, 1, 1, 1, -1, -1, -1]
@@ -131,7 +133,7 @@ if __name__ == '__main__':
             print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
         fkc.plot2d(0.02)
     elif user_in == 4:
-        print "(4) Testing 2 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
+        print "(4) FKC: Testing 2 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
         # Testing 2 attribute IRIS
         iris = datasets.load_iris()
         trX = iris.data[:100, :]
@@ -156,7 +158,7 @@ if __name__ == '__main__':
         print "No prodiction done."
         fkc.plot2d(0.02)
     elif user_in == 5:
-        print "(5) Testing 4 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
+        print "(5) FKC: Testing 4 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
         # Testing 4 attribute IRIS
         iris = datasets.load_iris()
         trX = scaler.fit_transform(iris.data[:100, :])
@@ -180,7 +182,7 @@ if __name__ == '__main__':
         print "No prodiction done."
         fkc.plot2d(0.02)
     elif user_in == 6:
-        print "(6) Testing BREAST CANCER dataset (all samples) \n"
+        print "(6) FKC: Testing BREAST CANCER dataset (all samples) \n"
         #####################################################################
         # Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -212,7 +214,7 @@ if __name__ == '__main__':
         print "No prodiction done."
         fkc.plot2d(0.02)
     elif user_in == 7:
-        print "Computing generalization error for BREAST CANCER dataset (100 experiments)\n"
+        print "(7) FKC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
         #####################################################################
         # Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -221,6 +223,8 @@ if __name__ == '__main__':
         # Dimensionality:       30                                          #
         # Features:             real, positive                              #
         #####################################################################
+        myseed = 2
+        np.random.seed(myseed)
 
         # All inputs and all labels
         bc_data = datasets.load_breast_cancer()
@@ -229,6 +233,13 @@ if __name__ == '__main__':
         trx_all = scaler.fit_transform(trx_all)
         try_all = bc_data.target
         try_all = np.array([i if i == 1 else -1 for i in try_all])
+
+        # Improve performance by reshuffling all samples before train-test split
+        tr_all = np.hstack((trx_all, try_all.reshape(len(try_all), 1)))
+        np.random.shuffle(tr_all)
+        trx_all = tr_all[:, :30]
+        try_all = tr_all[:, 30]
+
         (num_samples, num_features) = trx_all.shape
 
         # Training-to-test ratio of 67% : 33% (Bennett, Mangasarian, 1992)
@@ -240,10 +251,11 @@ if __name__ == '__main__':
             "Please check the number of training and test samples. "
 
         t = time()
-        gen_error_list = []
-        np.random.seed(0)
-        num_sims = 100
-        for i in range(10):
+        fkc_gen_error_list = []
+        num_experiments = 1
+        print "Running %d experiments... \n" % num_experiments
+        for i in range(num_experiments):
+            print "Running experiment: %d" % (i+1)
             # sorting not necessary, np.array not necessary
             tr_idx = np.random.choice(num_samples, num_train_samples,
                                              replace=False)
@@ -253,15 +265,42 @@ if __name__ == '__main__':
             tsX = trx_all[ts_idx, :]
             tsY = try_all[ts_idx]
 
-            kernel = 'rbf';degree = 1;gamma = 10;coef0 = 1
+            kernel = 'rbf';degree = 2;gamma = 12;coef0 = 1
             fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
             fkc.fit(trX, trY)
             ftest = fkc.predict(tsX)
+            print "fkc.eps_opt = \n", fkc.eps_opt
             num_wrong = 1 * (ftest != tsY).sum()
-            gen_error_list.append(num_wrong / float(num_test_samples))
+            fkc_gen_error_list.append(num_wrong / float(num_test_samples))
+
+        if kernel == 'rbf':
+            pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                        'ml_center_project\\ml_center_results\\'
+            filename = 'fkc_gen_error_%s_gamma_%d_coef_%d_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, gamma, coef0, myseed, num_experiments)
+            f = open(pathname + filename, 'w')
+            pickle.dump(fkc_gen_error_list, f)
+            f.close()
+        elif kernel == 'poly':
+            pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                        'ml_center_project\\ml_center_results\\'
+            filename = 'fkc_gen_error_%s_degree_%d_coef_%d_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, degree, coef0, myseed, num_experiments)
+            f = open(pathname + filename, 'w')
+            pickle.dump(fkc_gen_error_list, f)
+            f.close()
+        else:
+            # Linear kernel: degree = 1, coef0 = 0
+            pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                        'ml_center_project\\ml_center_results\\'
+            filename = 'fkc_gen_error_%s_degree_1_coef_0_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, myseed, num_experiments)
+            f = open(pathname + filename, 'w')
+            pickle.dump(fkc_gen_error_list, f)
+            f.close()
 
         print "Generatlization error BREAST CANCER dataset (100 experiments): \n", \
-            np.array(gen_error_list)
+            np.array(fkc_gen_error_list)
         print "Elapsed time %4.1f seconds." % (time() - t)
     else:
         print "Invalid selection. Program terminating. "

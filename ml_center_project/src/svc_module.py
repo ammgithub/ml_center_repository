@@ -92,7 +92,7 @@ if __name__ == '__main__':
     >>> print clf
     >>> clf.fit(trX, trY)
     >>> ftest = clf.predict(tsX)
-
+    
     execfile('svc_module.py')
     """
     import os

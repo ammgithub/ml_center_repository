@@ -226,6 +226,7 @@ class FastKernelClassifier(object):
                                                degree=self.degree,
                                                gamma=self.gamma,
                                                coef0=self.coef0)
+        self.ktest = ktest
         # print "self.trainx = \n", self.trainx
         # print "testx = \n", testx
         # print "ktest = \n", ktest

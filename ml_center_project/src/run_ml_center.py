@@ -32,10 +32,11 @@ if __name__ == '__main__':
     print 2 * " " + "(1) FKC: Testing OR problem"
     print 2 * " " + "(2) FKC: Testing AND problem"
     print 2 * " " + "(3) FKC: Testing 2-dimensional circular data"
-    print 2 * " " + "(4) FKC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
-    print 2 * " " + "(5) FKC: IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
-    print 2 * " " + "(6) FKC: BREAST CANCER dataset Testing (all samples)"
-    print 2 * " " + "(7) FKC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
+    print 2 * " " + "(4) FKC: Testing extended 2-dimensional circular data"
+    print 2 * " " + "(5) FKC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
+    print 2 * " " + "(6) FKC: IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
+    print 2 * " " + "(7) FKC: BREAST CANCER dataset Testing (all samples)"
+    print 2 * " " + "(8) FKC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
     print 80 * "-"
 
     bad_input = True
@@ -56,13 +57,21 @@ if __name__ == '__main__':
         tsX = np.array([[1, 2], [-3, 2], [6, -1]])
         tsY = [1, -1, 1]
 
-        kernel = 'rbf'; degree = 1; gamma = 1; coef0 = 1
-        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
-              % (kernel, degree, gamma, coef0)
+        # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.010  # solution
+        # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.012  # solution
+        # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.013  # no solution
+        # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.015  # solution
+        # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.017  # solution
+        kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 0.010
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
+              % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
-        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
         fkc.fit(trX, trY)
-        print "(fkc.weight_opt, fkc.eps_opt) = \n", (fkc.weight_opt, fkc.eps_opt)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "fkc.fun_opt = ", fkc.fun_opt
         ftest = fkc.predict(tsX)
         print "tsX = \n", tsX
         print "fkc.predict(tsX) = \n", ftest
@@ -84,13 +93,18 @@ if __name__ == '__main__':
         tsX = np.array([[1, 2], [-3, 2], [6, -1]])
         tsY = [1, -1, 1]
 
-        kernel = 'poly'; degree = 5; gamma = 1; coef0 = 1
-        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
-              % (kernel, degree, gamma, coef0)
+        # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.10000  # shift in separator
+        # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.00001  # incomplete sep
+        kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 100
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
+              % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
-        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
         fkc.fit(trX, trY)
-        print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "fkc.fun_opt = ", fkc.fun_opt
         ftest = fkc.predict(tsX)
         print "tsX = \n", tsX
         print "fkc.predict(tsX) = \n", ftest
@@ -111,14 +125,18 @@ if __name__ == '__main__':
         trY = [1, 1, 1, 1, -1, -1, -1]
         tsX = np.array([[0, 2], [3, 3], [6, 3]])
         tsY = [1, -1, 1]
-        kernel = 'rbf'; degree = 2; gamma = 1; coef0 = 1
+        # kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 0.10000  # one point misclass
+        kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 1000
 
-        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f" \
-              % (kernel, degree, gamma, coef0)
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+              % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
-        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
         fkc.fit(trX, trY)
-        print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "fkc.fun_opt = ", fkc.fun_opt
         ftest = fkc.predict(tsX)
         print "tsX = \n", tsX
         print "fkc.predict(tsX) = \n", ftest
@@ -133,7 +151,38 @@ if __name__ == '__main__':
             print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
         fkc.plot2d(0.02)
     elif user_in == 4:
-        print "(4) FKC: Testing 2 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
+        print "(4) FKC: Testing extended 2-dimensional circular data \n"
+        # Testing extended CIRCLE
+        trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.5]])
+        trY = [1, 1, 1, 1, -1, -1, -1, -1]
+        tsX = np.array([[0, 2], [3, 3], [6, 3]])
+        tsY = [1, -1, 1]
+        kernel = 'rbf'; degree = 2; gamma = 0.1; coef0 = 1; Csoft = 1000
+
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+              % (kernel, degree, gamma, coef0, Csoft)
+        print "-----------------------------------------------------"
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
+        fkc.fit(trX, trY)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "fkc.fun_opt = ", fkc.fun_opt
+        ftest = fkc.predict(tsX)
+        print "tsX = \n", tsX
+        print "fkc.predict(tsX) = \n", ftest
+        print "tsY = \n", tsY
+        if not (abs(ftest - tsY) <= 0.001).all():
+            print "*** Test set not classified correctly. ***"
+        ftest = fkc.predict(trX)
+        print "trX = \n", trX
+        print "fkc.predict(trX) = \n", ftest
+        print "trY = \n", trY
+        if not (abs(ftest - trY) <= 0.001).all():
+            print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+        fkc.plot2d(0.02)
+    elif user_in == 5:
+        print "(5) FKC: Testing 2 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
         # Testing 2 attribute IRIS
         iris = datasets.load_iris()
         trX = iris.data[:100, :]
@@ -141,14 +190,17 @@ if __name__ == '__main__':
         trX = trX[:, [0, 1]]
         trY = iris.target[:100]
         trY = [i if i == 1 else -1 for i in trY]
-        kernel = 'linear'; degree = 1; gamma = 1; coef0 = 1
+        kernel = 'linear'; degree = 1; gamma = 1; coef0 = 1; Csoft = 10000
 
-        print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
-              % (kernel, degree, gamma, coef0)
+        print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
+              % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
-        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
         fkc.fit(trX, trY)
-        print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "fkc.fun_opt = ", fkc.fun_opt
         ftest = fkc.predict(trX)
         print "trX = ", trX
         print "fkc.predict(trX) = ", ftest
@@ -157,22 +209,26 @@ if __name__ == '__main__':
             print "*** Training set not classified correctly. ***"
         print "No prodiction done."
         fkc.plot2d(0.02)
-    elif user_in == 5:
-        print "(5) FKC: Testing 4 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
+    elif user_in == 6:
+        print "(6) FKC: Testing 4 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
         # Testing 4 attribute IRIS
         iris = datasets.load_iris()
+        scaler = MinMaxScaler()
         trX = scaler.fit_transform(iris.data[:100, :])
         # trX = iris.data[:100, :]
         trY = iris.target[:100]
         trY = [i if i == 1 else -1 for i in trY]
-        kernel = 'linear'; degree = 1; gamma = 1; coef0 = 1
+        kernel = 'linear'; degree = 1; gamma = 1; coef0 = 1; Csoft = 10000
 
-        print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
-              % (kernel, degree, gamma, coef0)
+        print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
+              % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
-        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
         fkc.fit(trX, trY)
-        print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "fkc.fun_opt = ", fkc.fun_opt
         ftest = fkc.predict(trX)
         print "trX = ", trX
         print "fkc.predict(trX) = ", ftest
@@ -181,8 +237,8 @@ if __name__ == '__main__':
             print "*** Training set not classified correctly. ***"
         print "No prodiction done."
         fkc.plot2d(0.02)
-    elif user_in == 6:
-        print "(6) FKC: Testing BREAST CANCER dataset (all samples) \n"
+    elif user_in == 7:
+        print "(7) FKC: Testing BREAST CANCER dataset (all samples) \n"
         #####################################################################
         # Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -197,14 +253,17 @@ if __name__ == '__main__':
         trX = scaler.fit_transform(trX)
         trY = bc_data.target
         trY = np.array([i if i == 1 else -1 for i in trY])
-        kernel = 'rbf'; degree = 1; gamma = 8; coef0 = 1
+        kernel = 'rbf'; degree = 1; gamma = 8; coef0 = 1; Csoft = 10000
 
-        print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
-              % (kernel, degree, gamma, coef0)
+        print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
+              % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
-        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
         fkc.fit(trX, trY)
-        print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "fkc.fun_opt = ", fkc.fun_opt
         ftest = fkc.predict(trX)
         print "Skipped printing trX ...\n "
         print "fkc.predict(trX) = \n", ftest
@@ -213,8 +272,8 @@ if __name__ == '__main__':
             print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
         print "No prodiction done."
         fkc.plot2d(0.02)
-    elif user_in == 7:
-        print "(7) FKC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
+    elif user_in == 8:
+        print "(8) FKC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
         #####################################################################
         # Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -252,7 +311,7 @@ if __name__ == '__main__':
 
         t = time()
         fkc_gen_error_list = []
-        num_experiments = 1
+        num_experiments = 100
         print "Running %d experiments... \n" % num_experiments
         for i in range(num_experiments):
             print "Running experiment: %d" % (i+1)
@@ -265,11 +324,14 @@ if __name__ == '__main__':
             tsX = trx_all[ts_idx, :]
             tsY = try_all[ts_idx]
 
-            kernel = 'rbf';degree = 2;gamma = 12;coef0 = 1
-            fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+            kernel = 'rbf';degree = 2;gamma = 12;coef0 = 1; Csoft = 10000
+            fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
             fkc.fit(trX, trY)
             ftest = fkc.predict(tsX)
-            print "fkc.eps_opt = \n", fkc.eps_opt
+            print "fkc.eps_opt = ", fkc.eps_opt
+            # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+            # print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+            # print "fkc.fun_opt = ", fkc.fun_opt
             num_wrong = 1 * (ftest != tsY).sum()
             fkc_gen_error_list.append(num_wrong / float(num_test_samples))
 

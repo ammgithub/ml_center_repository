@@ -19,67 +19,6 @@ __version__ = 0.0
 np.set_printoptions(linewidth=100, edgeitems='all', suppress=True,
                     precision=4)
 
-
-class ThisSVC(object):
-    """
-    Support vector classifier to compare.
-    """
-    def __init__(self, svc_C, svc_kernel, svc_degree, svc_gamma, svc_coef0, \
-                 svc_cache_size):
-        """
-        SVM classification parameters
-        --------------
-        svc_C           : 10000 to have no data points outside the tube
-        svc_kernel      : 'poly', 'rbf'
-        svc_degree      : (u'v + svc_coef0)^svc_degree, ignored by rbf and other kernels
-        svc_gamma       : exp(svc_gamma * ||u - v||)
-                          svc_gamma = 1/2sigma^2
-        svc_coef0       : (u'v + svc_coef0)^svc_degree, poly and sigmoid kernel only
-        svc_cache_size  : 200
-        svc_tol         : default 1e-3
-        svc_verbose     : default False
-        svc_max_iter    : default -1 for not limit
-        """
-        self.svc_C = svc_C
-        self.svc_kernel = svc_kernel
-        self.svc_degree = svc_degree
-        self.svc_gamma = svc_gamma
-        self.svc_coef0 = svc_coef0
-        self.svc_cache_size = svc_cache_size
-        self.svc_tol = svc_tol
-        self.svc_verbose = svc_verbose
-        self.svc_max_iter = svc_max_iter
-
-    def get_data(self, trX, trY, tsX, tsY):
-        """
-        Dataset
-        -------
-        trX: input training data
-        trY: label training data
-        tsX: input test data
-        tsY: label test data
-        """
-        self.trX = trX
-        self.trY = trY
-        self.tsX = tsX
-        self.tsY = tsY
-
-    def run_this_svc(self):
-        """
-        SVM Classification and Prediction
-        ---------------------------------
-        """
-
-        clf = svm.SVC(C=self.svc_C, cache_size=self.svc_cache_size, \
-                      coef0=self.svc_coef0, degree=self.svc_degree, \
-                      gamma=self.svc_gamma, kernel=self.svc_kernel, \
-                      max_iter=self.svc_max_iter, tol=self.svc_tol, \
-                      verbose=self.svc_verbose)
-        clf.fit(self.trX, self.trY)
-        predY = clf.predict(self.tsX)
-        self.predY = predY
-
-
 class FastKernelClassifier(object):
     """
     A very fast kernel machine.
@@ -137,12 +76,13 @@ class FastKernelClassifier(object):
     References
     ----------
     """
-    def __init__(self, kernel='linear', degree=3, gamma=1, coef0=0.0,
+    def __init__(self, kernel='linear', degree=3, gamma=1, coef0=0.0, Csoft=10000.0,
                  verbose=False):
         self.kernel = kernel
         self.degree = degree
         self.gamma = gamma
         self.coef0 = coef0
+        self.Csoft = Csoft
 
     def fit(self, trainx, trainy):
         """
@@ -168,10 +108,10 @@ class FastKernelClassifier(object):
         self.trainy = trainy
 
         # Objective function
-        c = np.vstack((np.zeros((self.num_train_samples+1, 1)), 1)).flatten()
+        c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
+                       self.Csoft*np.ones((self.num_train_samples, 1)), 1)).flatten()        # soft 5/7
 
         # Constraints from data (halfspaces)
-        # kmat = get_label_adjusted_train_kernel(trainx, trainy)
         kmat = get_label_adjusted_train_kernel(trainx, trainy,
                                                kernel=self.kernel,
                                                degree=self.degree,
@@ -181,28 +121,42 @@ class FastKernelClassifier(object):
         self.kmat = kmat
         # print "self.trainx = \n", self.trainx
         # print "kmat = \n", kmat
-        Aub_data = np.hstack((-kmat, -np.ones((self.num_train_samples, 1))))
+        Aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
+                              -np.ones((self.num_train_samples, 1))))
         bub_data = np.zeros((self.num_train_samples, 1))
+        # print "Aub_data = \n", Aub_data
 
         # Box constraints lower
         Aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
+                                   np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
                                    -np.ones((self.num_train_samples+1, 1))))
         bub_box_lower = np.ones((self.num_train_samples+1, 1))
 
         # Box constraints upper
         Aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
+                                   np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 3/7
                                    -np.ones((self.num_train_samples+1, 1))))
         bub_box_upper = np.ones((self.num_train_samples+1, 1))
 
+        # Box xi                                                                soft 4/7
+        Aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
+                                -np.identity(self.num_train_samples),
+                                np.zeros((self.num_train_samples, 1))))
+        bub_box_xi = np.zeros((self.num_train_samples, 1))
+
         # Putting it all together
-        Aub = np.vstack((Aub_data, Aub_box_lower, Aub_box_upper))
-        bub = np.vstack((bub_data, bub_box_lower, bub_box_upper)).flatten()
+        Aub = np.vstack((Aub_data, Aub_box_lower, Aub_box_upper, Aub_box_xi))       # soft 6/7
+        bub = np.vstack((bub_data, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
+
         res = lp(c=c, A_ub=Aub, b_ub=bub, bounds=(None, None))
         weight_opt = res.x
-
+        print "weight_opt = \n", weight_opt
         # last element is epsilon
-        self.weight_opt = weight_opt[:-1]
-        self.eps_opt = res.fun
+        # self.weight_opt = weight_opt[:-1]
+        self.weight_opt = weight_opt[:-(1+self.num_train_samples)]                       # soft 7/7
+        self.pen_opt = weight_opt[(1+self.num_train_samples):-1]
+        self.eps_opt = weight_opt[-1]
+        self.fun_opt = res.fun
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
 
@@ -267,8 +221,8 @@ class FastKernelClassifier(object):
             ax.set_xlabel('trainx[:, 0] - Attribute 1')
             ax.set_ylabel('trainx[:, 1] - Attribute 2')
             title_string = "FKC - Training data and decision surface for: \nKernel = %s, " \
-                           "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" % (
-                            self.kernel, self.degree, self.gamma, self.coef0)
+                           "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, Csoft =  %4.4f" % (
+                            self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
             ax.set_title(title_string)
             plt.grid()
             plt.show()
@@ -363,20 +317,23 @@ if __name__ == '__main__':
     import os
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
-    # Include a small dataset to run module: OR problem
-    print "Testing OR:"
-    trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-    trY = [1, -1, 1, -1]
-    tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    # Testing CIRCLE
+    print "FKC: Testing extended circular problem \n"
+    trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.5]])
+    trY = [1, 1, 1, 1, -1, -1, -1, -1]
+    tsX = np.array([[0, 2], [3, 3], [6, 3]])
     tsY = [1, -1, 1]
-    kernel = 'rbf'; degree = 2; gamma = 1; coef0 = 1
+    kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 0.1
 
-    print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
-          % (kernel, degree, gamma, coef0)
+    print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+          % (kernel, degree, gamma, coef0, Csoft)
     print "-----------------------------------------------------"
-    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
     fkc.fit(trX, trY)
-    print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+    print "fkc.eps_opt = ", fkc.eps_opt
+    print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+    print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+    print "fkc.fun_opt = ", fkc.fun_opt
     ftest = fkc.predict(tsX)
     print "tsX = \n", tsX
     print "fkc.predict(tsX) = \n", ftest
@@ -390,3 +347,31 @@ if __name__ == '__main__':
     if not (abs(ftest - trY) <= 0.001).all():
         print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
     fkc.plot2d(0.02)
+
+    # # Include a small dataset to run module: OR problem
+    # print "Testing OR:"
+    # trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
+    # trY = [1, -1, 1, -1]
+    # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    # tsY = [1, -1, 1]
+    # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 10000.0
+    #
+    # print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.1f" \
+    #       % (kernel, degree, gamma, coef0, Csoft)
+    # print "-----------------------------------------------------"
+    # fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
+    # fkc.fit(trX, trY)
+    # print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+    # ftest = fkc.predict(tsX)
+    # print "tsX = \n", tsX
+    # print "fkc.predict(tsX) = \n", ftest
+    # print "tsY = \n", tsY
+    # if not (abs(ftest - tsY) <= 0.001).all():
+    #     print "*** Test set not classified correctly. ***"
+    # ftest = fkc.predict(trX)
+    # print "trX = \n", trX
+    # print "fkc.predict(trX) = \n", ftest
+    # print "trY = \n", trY
+    # if not (abs(ftest - trY) <= 0.001).all():
+    #     print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+    # fkc.plot2d(0.02)

@@ -3,6 +3,10 @@ Created on October 25, 2017
 
 Running ml_center
 
+FastKernelClassifier requires Gurobi in order to run the method fit_grb().  Otherwise run
+fit(), with significantly reduced performance. This includes not finding the optimal
+vector of weights in some instances.
+
 """
 
 import numpy as np
@@ -62,12 +66,13 @@ if __name__ == '__main__':
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.013  # no solution
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.015  # solution
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.017  # solution
-        kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 0.010
+        kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 100
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-        fkc.fit(trX, trY)
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
         print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -100,7 +105,8 @@ if __name__ == '__main__':
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-        fkc.fit(trX, trY)
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
         print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -132,7 +138,8 @@ if __name__ == '__main__':
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-        fkc.fit(trX, trY)
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
         print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -157,13 +164,14 @@ if __name__ == '__main__':
         trY = [1, 1, 1, 1, -1, -1, -1, -1]
         tsX = np.array([[0, 2], [3, 3], [6, 3]])
         tsY = [1, -1, 1]
-        kernel = 'rbf'; degree = 2; gamma = 0.1; coef0 = 1; Csoft = 1000
+        kernel = 'rbf'; degree = 2; gamma = 0.1; coef0 = 1; Csoft = 1000.
 
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-        fkc.fit(trX, trY)
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
         print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -196,7 +204,12 @@ if __name__ == '__main__':
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-        fkc.fit(trX, trY)
+        #####################################################################
+        # kernel = linear, degree = 1, gamma = 1.00, coef0 = 1.00, Csoft = 10000.0000
+        # fkc.fit() results in incorrect classification, fkc.fit_grb() is okay
+        #####################################################################
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
         print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -224,7 +237,8 @@ if __name__ == '__main__':
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-        fkc.fit(trX, trY)
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
         print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -259,7 +273,15 @@ if __name__ == '__main__':
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-        fkc.fit(trX, trY)
+        #####################################################################
+        # kernel = rbf, degree = 1, gamma = 8.00, coef0 = 1.00, Csoft = 10000.0000
+        # Here, the Scipy optimizer does not identify an optimal solution.
+        # (all weights are zero, fkc.fun_opt = -0)
+        # Gurobi finds optimal solution,
+        # (nonzero weights, fkc.fun_opt (GRB) =  -0.45512124496)
+        #####################################################################
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
         print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -311,7 +333,7 @@ if __name__ == '__main__':
 
         t = time()
         fkc_gen_error_list = []
-        num_experiments = 100
+        num_experiments = 10
         print "Running %d experiments... \n" % num_experiments
         for i in range(num_experiments):
             print "Running experiment: %d" % (i+1)
@@ -324,9 +346,10 @@ if __name__ == '__main__':
             tsX = trx_all[ts_idx, :]
             tsY = try_all[ts_idx]
 
-            kernel = 'rbf';degree = 2;gamma = 12;coef0 = 1; Csoft = 10000
+            kernel = 'rbf';degree = 2;gamma = 12;coef0 = 1; Csoft = 10
             fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-            fkc.fit(trX, trY)
+            fkc.fit_grb(trX, trY)
+            # fkc.fit(trX, trY)
             ftest = fkc.predict(tsX)
             print "fkc.eps_opt = ", fkc.eps_opt
             # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
@@ -338,16 +361,16 @@ if __name__ == '__main__':
         if kernel == 'rbf':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_gen_error_%s_gamma_%d_coef_%d_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, gamma, coef0, myseed, num_experiments)
+            filename = 'fkc_gen_error_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB.pickle' \
+                       % (kernel, gamma, coef0, Csoft, myseed, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
         elif kernel == 'poly':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_gen_error_%s_degree_%d_coef_%d_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, degree, coef0, myseed, num_experiments)
+            filename = 'fkc_gen_error_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, degree, coef0, Csoft, myseed, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
@@ -355,14 +378,16 @@ if __name__ == '__main__':
             # Linear kernel: degree = 1, coef0 = 0
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_gen_error_%s_degree_1_coef_0_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, myseed, num_experiments)
+            filename = 'fkc_gen_error_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, Csoft, myseed, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
 
-        print "Generatlization error BREAST CANCER dataset (100 experiments): \n", \
+        print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
             np.array(fkc_gen_error_list)
+        print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
+              % num_experiments, "%.3f" % np.array(fkc_gen_error_list).mean()
         print "Elapsed time %4.1f seconds." % (time() - t)
     else:
         print "Invalid selection. Program terminating. "

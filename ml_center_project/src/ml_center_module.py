@@ -23,6 +23,10 @@ class FastKernelClassifier(object):
     """
     A very fast kernel machine.
 
+    FastKernelClassifier requires Gurobi in order to run the method fit_grb().
+    Otherwise use fit(), with significantly reduced performance.
+    This includes not finding the optimal vector of weights in some instances.
+
     The following kernels are employed:
 
     'linear'
@@ -118,7 +122,7 @@ class FastKernelClassifier(object):
                                                gamma=self.gamma,
                                                coef0=self.coef0)
 
-        self.kmat = kmat
+        # self.kmat = kmat
         # print "self.trainx = \n", self.trainx
         # print "kmat = \n", kmat
         Aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
@@ -148,6 +152,7 @@ class FastKernelClassifier(object):
         Aub = np.vstack((Aub_data, Aub_box_lower, Aub_box_upper, Aub_box_xi))       # soft 6/7
         bub = np.vstack((bub_data, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
 
+        # # Using scipy lp solver
         res = lp(c=c, A_ub=Aub, b_ub=bub, bounds=(None, None))
         weight_opt = res.x
         print "weight_opt = \n", weight_opt
@@ -159,6 +164,101 @@ class FastKernelClassifier(object):
         self.fun_opt = res.fun
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
+
+    def fit_grb(self, trainx, trainy):
+        """
+        Same as the fit method, however, using Gurobi.
+        Compute the optimal weight vector to classify (trainx, trainy) using Gurobi.
+
+        Parameters
+        ----------
+        trainx : numpy array of floats, num_train_samples-by-num_features
+                 Input training samples
+
+        trainy : list of numpy array of floats or integers num_train_samples-by-one
+                 Input training labels
+
+        Returns
+        -------
+        self : object
+
+        """
+        import gurobipy as grb
+        [self.num_train_samples, self.num_features] = trainx.shape
+
+        # Need trainx and testx in 'predict', need trainy in 'plot2d'
+        self.trainx = trainx
+        self.trainy = trainy
+
+        # Objective function
+        c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
+                       self.Csoft*np.ones((self.num_train_samples, 1)), 1)).flatten()        # soft 5/7
+
+        # Constraints from data (halfspaces)
+        kmat = get_label_adjusted_train_kernel(trainx, trainy,
+                                               kernel=self.kernel,
+                                               degree=self.degree,
+                                               gamma=self.gamma,
+                                               coef0=self.coef0)
+
+        # self.kmat = kmat
+        # print "self.trainx = \n", self.trainx
+        # print "kmat = \n", kmat
+        Aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
+                              -np.ones((self.num_train_samples, 1))))
+        bub_data = np.zeros((self.num_train_samples, 1))
+        # print "Aub_data = \n", Aub_data
+
+        # Box constraints lower
+        Aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
+                                   np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
+                                   -np.ones((self.num_train_samples+1, 1))))
+        bub_box_lower = np.ones((self.num_train_samples+1, 1))
+
+        # Box constraints upper
+        Aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
+                                   np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 3/7
+                                   -np.ones((self.num_train_samples+1, 1))))
+        bub_box_upper = np.ones((self.num_train_samples+1, 1))
+
+        # Box xi                                                                soft 4/7
+        Aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
+                                -np.identity(self.num_train_samples),
+                                np.zeros((self.num_train_samples, 1))))
+        bub_box_xi = np.zeros((self.num_train_samples, 1))
+
+        # Putting it all together
+        Aub = np.vstack((Aub_data, Aub_box_lower, Aub_box_upper, Aub_box_xi))       # soft 6/7
+        bub = np.vstack((bub_data, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
+
+        # Using Gurobi
+        m = grb.Model()
+
+        # Switch off console output
+        m.Params.OutputFlag = 0
+
+        # m.set(grb.GRB_IntParam_OutputFlag, 0)
+        J = range(2 * self.num_train_samples + 2)
+        I = range(4 * self.num_train_samples + 2)
+        x = [m.addVar(lb=-grb.GRB.INFINITY, ub=grb.GRB.INFINITY,
+                      obj=c[j], vtype=grb.GRB.CONTINUOUS,
+                      name="weight " + str(j + 1)) for j in J]  # TODO: add name, continuous explicit?
+        m.update()
+        constraints = [m.addConstr(grb.quicksum(Aub[i, j] * x[j] for j in J) <= bub[i]) for i in I]
+        m.update()
+
+        m.optimize()
+        weight_opt = [x[j].x for j in J]
+        # last element is epsilon
+        # self.weight_opt = weight_opt[:-1]
+        self.weight_opt = weight_opt[:-(1+self.num_train_samples)]                       # soft 7/7
+        self.pen_opt = weight_opt[(1+self.num_train_samples):-1]
+        self.eps_opt = weight_opt[-1]
+        self.fun_opt = m.objval
+        if np.abs(self.eps_opt) <= 0.00001:
+            warnings.warn('\neps_opt is close to zero. Data not separable. ')
+        if m.Status != 2:
+            warnings.warn('\nGurobi did not return an optimal solution. ')
 
     def predict(self, testx):
         """
@@ -180,7 +280,7 @@ class FastKernelClassifier(object):
                                                degree=self.degree,
                                                gamma=self.gamma,
                                                coef0=self.coef0)
-        self.ktest = ktest
+        # self.ktest = ktest
         # print "self.trainx = \n", self.trainx
         # print "testx = \n", testx
         # print "ktest = \n", ktest
@@ -317,7 +417,7 @@ if __name__ == '__main__':
     import os
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
-    # Testing CIRCLE
+    # Testing extended CIRCLE
     print "FKC: Testing extended circular problem \n"
     trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.5]])
     trY = [1, 1, 1, 1, -1, -1, -1, -1]
@@ -329,7 +429,8 @@ if __name__ == '__main__':
           % (kernel, degree, gamma, coef0, Csoft)
     print "-----------------------------------------------------"
     fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-    fkc.fit(trX, trY)
+    fkc.fit_grb(trX, trY)
+    # fkc.fit(trX, trY)
     print "fkc.eps_opt = ", fkc.eps_opt
     print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
     print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -354,14 +455,18 @@ if __name__ == '__main__':
     # trY = [1, -1, 1, -1]
     # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
     # tsY = [1, -1, 1]
-    # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 10000.0
+    # kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 10
     #
     # print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.1f" \
     #       % (kernel, degree, gamma, coef0, Csoft)
     # print "-----------------------------------------------------"
     # fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-    # fkc.fit(trX, trY)
-    # print "(fkc.weight_opt, fkc.eps_opt) = ", (fkc.weight_opt, fkc.eps_opt)
+    # fkc.fit_grb(trX, trY)
+    # # fkc.fit(trX, trY)
+    # print "fkc.eps_opt = ", fkc.eps_opt
+    # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+    # print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+    # print "fkc.fun_opt = ", fkc.fun_opt
     # ftest = fkc.predict(tsX)
     # print "tsX = \n", tsX
     # print "fkc.predict(tsX) = \n", ftest

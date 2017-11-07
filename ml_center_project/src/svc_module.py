@@ -62,8 +62,8 @@ def plot2d(trainx, trainy, clf, meshstep=0.02):
         ax.set_xlabel('trainx[:, 0] - Attribute 1')
         ax.set_ylabel('trainx[:, 1] - Attribute 2')
         title_string = "SVC: Training data and decision surface for: \nKernel = %s, " \
-                       "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" % (
-                        clf.kernel, clf.degree, clf.gamma, clf.coef0)
+                       "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, C =  %4.4f" % (
+                        clf.kernel, clf.degree, clf.gamma, clf.coef0, clf.C)
         ax.set_title(title_string)
         plt.grid()
         plt.show()
@@ -104,10 +104,11 @@ if __name__ == '__main__':
     print 2 * " " + "(1) SVC: Testing OR problem"
     print 2 * " " + "(2) SVC: Testing AND problem"
     print 2 * " " + "(3) SVC: Testing 2-dimensional circular data"
-    print 2 * " " + "(4) SVC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
-    print 2 * " " + "(5) SVC: IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
-    print 2 * " " + "(6) SVC: BREAST CANCER dataset Testing (all samples)"
-    print 2 * " " + "(7) SVC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
+    print 2 * " " + "(4) SVC: Testing extended 2-dimensional circular data"
+    print 2 * " " + "(5) SVC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
+    print 2 * " " + "(6) SVC: IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
+    print 2 * " " + "(7) SVC: BREAST CANCER dataset Testing (all samples)"
+    print 2 * " " + "(8) SVC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
     print 80 * "-"
 
     bad_input = True
@@ -128,10 +129,10 @@ if __name__ == '__main__':
         tsX = np.array([[1, 2], [-3, 2], [6, -1]])
         tsY = [1, -1, 1]
 
-        svc_kernel = 'rbf';svc_degree = 2;svc_gamma = 1;svc_coef0 = 1;
-        svc_cache_size = 200;svc_C = 10000.0
-        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
-              % (svc_kernel, svc_degree, svc_gamma, svc_coef0)
+        svc_kernel = 'poly';svc_degree = 2;svc_gamma = 1;svc_coef0 = 1;
+        svc_cache_size = 200;svc_C = 100
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
+              % (svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_C)
         print "-----------------------------------------------------"
         clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, \
                       coef0=svc_coef0, degree=svc_degree, \
@@ -162,8 +163,8 @@ if __name__ == '__main__':
 
         svc_kernel = 'poly';svc_degree = 5;svc_gamma = 1;svc_coef0 = 1;
         svc_cache_size = 200;svc_C = 10000.0
-        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f"\
-              % (svc_kernel, svc_degree, svc_gamma, svc_coef0)
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
+              % (svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_C)
         print "-----------------------------------------------------"
         clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, \
                       coef0=svc_coef0, degree=svc_degree, \
@@ -184,8 +185,73 @@ if __name__ == '__main__':
         if not (abs(ftest - trY) <= 0.001).all():
             print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
         plot2d(trX, trY, clf, 0.02)
-    elif user_in == 7:
-        print "(7) SVC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
+    elif user_in == 3:
+        print "(3) SVC: Testing 2-dimensional circular data \n"
+        # Testing CIRCLE
+        trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2]])
+        trY = [1, 1, 1, 1, -1, -1, -1]
+        tsX = np.array([[0, 2], [3, 3], [6, 3]])
+        tsY = [1, -1, 1]
+        # kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 0.10000  # one point misclass
+
+        svc_kernel = 'poly'; svc_degree = 2; svc_gamma = 1; svc_coef0 = 1
+        svc_cache_size = 200;svc_C = 10000.0
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+              % (svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_C)
+        print "-----------------------------------------------------"
+        clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, \
+                      coef0=svc_coef0, degree=svc_degree, \
+                      gamma=svc_gamma, kernel=svc_kernel)
+        print clf
+        clf.fit(trX, trY)
+        print "Print something to check solution quality..."
+        ftest = clf.predict(tsX)
+        print "tsX = \n", tsX
+        print "clf.predict(tsX) = \n", ftest
+        print "tsY = \n", tsY
+        if not (abs(ftest - tsY) <= 0.001).all():
+            print "*** Test set not classified correctly. ***"
+        ftest = clf.predict(trX)
+        print "trX = \n", trX
+        print "clf.predict(trX) = \n", ftest
+        print "trY = \n", trY
+        if not (abs(ftest - trY) <= 0.001).all():
+            print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+        plot2d(trX, trY, clf, 0.02)
+    elif user_in == 4:
+        print "(4) SVC: Testing extended 2-dimensional circular data \n"
+        # Testing extended CIRCLE
+        trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.5]])
+        trY = [1, 1, 1, 1, -1, -1, -1, -1]
+        tsX = np.array([[0, 2], [3, 3], [6, 3]])
+        tsY = [1, -1, 1]
+
+        svc_kernel = 'rbf'; svc_degree = 2; svc_gamma = 0.1; svc_coef0 = 1;
+        svc_cache_size = 200; svc_C = 1000.
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+              % (svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_C)
+        print "-----------------------------------------------------"
+        clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, \
+                      coef0=svc_coef0, degree=svc_degree, \
+                      gamma=svc_gamma, kernel=svc_kernel)
+        print clf
+        clf.fit(trX, trY)
+        print "Print something to check solution quality..."
+        ftest = clf.predict(tsX)
+        print "tsX = \n", tsX
+        print "clf.predict(tsX) = \n", ftest
+        print "tsY = \n", tsY
+        if not (abs(ftest - tsY) <= 0.001).all():
+            print "*** Test set not classified correctly. ***"
+        ftest = clf.predict(trX)
+        print "trX = \n", trX
+        print "clf.predict(trX) = \n", ftest
+        print "trY = \n", trY
+        if not (abs(ftest - trY) <= 0.001).all():
+            print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+        plot2d(trX, trY, clf, 0.02)
+    elif user_in == 8:
+        print "(8) SVC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
         #####################################################################
         # Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -224,7 +290,7 @@ if __name__ == '__main__':
 
         t = time()
         svc_gen_error_list = []
-        num_experiments = 100
+        num_experiments = 10
         print "Running %d experiments... \n" % num_experiments
         for i in range(num_experiments):
             print "Running experiment: %d" % (i+1)
@@ -237,7 +303,7 @@ if __name__ == '__main__':
             tsX = trx_all[ts_idx, :]
             tsY = try_all[ts_idx]
 
-            kernel = 'rbf';degree = 2;gamma = 20;coef0 = 1
+            kernel = 'rbf';degree = 2;gamma = 12;coef0 = 1; Csoft = 10000
 
             svc_C = 1e9;svc_cache_size = 200
 
@@ -254,16 +320,16 @@ if __name__ == '__main__':
         if kernel == 'rbf':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'svc_gen_error_%s_gamma_%d_coef_%d_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, gamma, coef0, myseed, num_experiments)
+            filename = 'svc_gen_error_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, gamma, coef0, Csoft, myseed, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(svc_gen_error_list, f)
             f.close()
         elif kernel == 'poly':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'svc_gen_error_%s_degree_%d_coef_%d_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, degree, coef0, myseed, num_experiments)
+            filename = 'svc_gen_error_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, degree, coef0, Csoft, myseed, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(svc_gen_error_list, f)
             f.close()
@@ -271,13 +337,15 @@ if __name__ == '__main__':
             # Linear kernel: degree = 1, coef0 = 0
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'svc_gen_error_%s_degree_1_coef_0_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, myseed, num_experiments)
+            filename = 'svc_gen_error_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, myseed, Csoft, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(svc_gen_error_list, f)
             f.close()
 
-        print "Generatlization error BREAST CANCER dataset (100 experiments): \n", \
+        print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
             np.array(svc_gen_error_list)
+        print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
+              % num_experiments, "%.3f" % np.array(svc_gen_error_list).mean()
         print "Elapsed time %4.1f seconds." % (time() - t)
 

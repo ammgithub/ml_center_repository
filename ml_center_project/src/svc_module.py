@@ -131,7 +131,7 @@ if __name__ == '__main__':
 
         svc_kernel = 'poly';svc_degree = 2;svc_gamma = 1;svc_coef0 = 1;
         svc_cache_size = 200;svc_C = 100
-        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, svc_C = %5.4f"\
               % (svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_C)
         print "-----------------------------------------------------"
         clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, \
@@ -163,7 +163,7 @@ if __name__ == '__main__':
 
         svc_kernel = 'poly';svc_degree = 5;svc_gamma = 1;svc_coef0 = 1;
         svc_cache_size = 200;svc_C = 10000.0
-        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, svc_C = %5.4f"\
               % (svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_C)
         print "-----------------------------------------------------"
         clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, \
@@ -192,11 +192,11 @@ if __name__ == '__main__':
         trY = [1, 1, 1, 1, -1, -1, -1]
         tsX = np.array([[0, 2], [3, 3], [6, 3]])
         tsY = [1, -1, 1]
-        # kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 0.10000  # one point misclass
+        # kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; svc_C = 0.10000  # one point misclass
 
         svc_kernel = 'poly'; svc_degree = 2; svc_gamma = 1; svc_coef0 = 1
         svc_cache_size = 200;svc_C = 10000.0
-        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, svc_C = %5.4f" \
               % (svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_C)
         print "-----------------------------------------------------"
         clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, \
@@ -228,7 +228,7 @@ if __name__ == '__main__':
 
         svc_kernel = 'rbf'; svc_degree = 2; svc_gamma = 0.1; svc_coef0 = 1;
         svc_cache_size = 200; svc_C = 1000.
-        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, svc_C = %5.4f" \
               % (svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_C)
         print "-----------------------------------------------------"
         clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, \
@@ -288,9 +288,20 @@ if __name__ == '__main__':
         assert num_train_samples + num_test_samples == num_samples, \
             "Please check the number of training and test samples. "
 
+        kernel = 'rbf';
+        degree = 2;
+        gamma = 12;
+        coef0 = 1;
+        svc_C = 10
+
+        svc_cache_size = 200
+
+        clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, coef0=coef0,
+                      degree=degree, gamma=gamma, kernel=kernel)
+
         t = time()
         svc_gen_error_list = []
-        num_experiments = 10
+        num_experiments = 1
         print "Running %d experiments... \n" % num_experiments
         for i in range(num_experiments):
             print "Running experiment: %d" % (i+1)
@@ -302,13 +313,8 @@ if __name__ == '__main__':
             trY = try_all[tr_idx]
             tsX = trx_all[ts_idx, :]
             tsY = try_all[ts_idx]
+            print trX
 
-            kernel = 'rbf';degree = 2;gamma = 12;coef0 = 1; Csoft = 10000
-
-            svc_C = 1e9;svc_cache_size = 200
-
-            clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, coef0=coef0, \
-                          degree=degree, gamma=gamma, kernel=kernel)
 
             clf.fit(trX, trY)
             ftest = clf.predict(tsX)
@@ -320,16 +326,16 @@ if __name__ == '__main__':
         if kernel == 'rbf':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'svc_gen_error_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, gamma, coef0, Csoft, myseed, num_experiments)
+            filename = 'svc_gen_error_%s_gamma_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, gamma, coef0, svc_C, myseed, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(svc_gen_error_list, f)
             f.close()
         elif kernel == 'poly':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'svc_gen_error_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, degree, coef0, Csoft, myseed, num_experiments)
+            filename = 'svc_gen_error_%s_degree_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, degree, coef0, svc_C, myseed, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(svc_gen_error_list, f)
             f.close()
@@ -337,8 +343,8 @@ if __name__ == '__main__':
             # Linear kernel: degree = 1, coef0 = 0
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'svc_gen_error_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, myseed, Csoft, num_experiments)
+            filename = 'svc_gen_error_%s_degree_1_coef_0_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, myseed, svc_C, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(svc_gen_error_list, f)
             f.close()

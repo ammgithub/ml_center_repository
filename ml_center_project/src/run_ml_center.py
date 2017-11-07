@@ -331,9 +331,18 @@ if __name__ == '__main__':
         assert num_train_samples + num_test_samples == num_samples, \
             "Please check the number of training and test samples. "
 
+        kernel = 'rbf';
+        degree = 2;
+        gamma = 12;
+        coef0 = 1;
+        Csoft = 10
+
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
+                                   coef0=coef0, Csoft=Csoft)
+
         t = time()
         fkc_gen_error_list = []
-        num_experiments = 10
+        num_experiments = 1
         print "Running %d experiments... \n" % num_experiments
         for i in range(num_experiments):
             print "Running experiment: %d" % (i+1)
@@ -345,9 +354,7 @@ if __name__ == '__main__':
             trY = try_all[tr_idx]
             tsX = trx_all[ts_idx, :]
             tsY = try_all[ts_idx]
-
-            kernel = 'rbf';degree = 2;gamma = 12;coef0 = 1; Csoft = 10
-            fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
+            print trX
             fkc.fit_grb(trX, trY)
             # fkc.fit(trX, trY)
             ftest = fkc.predict(tsX)

@@ -235,7 +235,11 @@ class FastKernelClassifier(object):
         m = grb.Model()
 
         # Switch off console output
-        m.Params.OutputFlag = 0
+        # m.Params.OutputFlag = 1
+        m.setParam('OutputFlag', 1)
+        m.setParam('Method', 1)
+        m.setParam('TimeLimit', 1)
+        m.setParam('Aggregate', 0)
 
         # m.set(grb.GRB_IntParam_OutputFlag, 0)
         J = range(2 * self.num_train_samples + 2)

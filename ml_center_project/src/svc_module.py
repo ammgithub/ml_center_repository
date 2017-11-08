@@ -107,8 +107,9 @@ if __name__ == '__main__':
     print 2 * " " + "(4) SVC: Testing extended 2-dimensional circular data"
     print 2 * " " + "(5) SVC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
     print 2 * " " + "(6) SVC: IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
-    print 2 * " " + "(7) SVC: BREAST CANCER dataset Testing (all samples)"
-    print 2 * " " + "(8) SVC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
+    print 2 * " " + "(7) SVC: Computing generalization error for 2-class IRIS dataset (100 experiments)"
+    print 2 * " " + "(8) SVC: BREAST CANCER dataset Testing (all samples)"
+    print 2 * " " + "(9) SVC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
     print 80 * "-"
 
     bad_input = True
@@ -250,8 +251,110 @@ if __name__ == '__main__':
         if not (abs(ftest - trY) <= 0.001).all():
             print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
         plot2d(trX, trY, clf, 0.02)
-    elif user_in == 8:
-        print "(8) SVC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
+    elif user_in == 7:
+        print "(7) SVC: Computing generalization error for 2-class IRIS dataset (100 experiments)"
+        #####################################################################
+        # Testing IRIS CLASSES 1 AND 2                                      #
+        # Classes:              2                                           #
+        # Samples per class:    50(Setosa), 50(versicolor)                 #
+        # Samples total:        100                                         #
+        # Dimensionality:       4                                          #
+        # Features:             real, positive                              #
+        #####################################################################
+
+        myseed = 2
+        np.random.seed(myseed)
+
+        # All inputs and all labels
+        iris_data = datasets.load_iris()
+        scaler = MinMaxScaler()
+        trx_all = iris_data.data[:100, :]
+        trx_all = scaler.fit_transform(trx_all)
+        try_all = iris_data.target[:100]
+        try_all = np.array([i if i == 1 else -1 for i in try_all])
+
+        # Improve performance by reshuffling all samples before train-test split
+        tr_all = np.hstack((trx_all, try_all.reshape(len(try_all), 1)))
+        np.random.shuffle(tr_all)
+        trx_all = tr_all[:, :4]
+        try_all = tr_all[:, 4]
+
+        (num_samples, num_features) = trx_all.shape
+
+        # Training-to-test ratio of 67% : 33% (Bennett, Mangasarian, 1992)
+        train_ratio = 0.67
+        test_ratio = 0.33
+        num_train_samples = int(round(.67 * num_samples, 0))  # 67 train
+        num_test_samples = int(round(.33 * num_samples, 0))  # 33 test
+        assert num_train_samples + num_test_samples == num_samples, \
+            "Please check the number of training and test samples. "
+
+        kernel = 'poly';
+        degree = 2;
+        gamma = 1;
+        coef0 = 1;
+        svc_C = 10
+
+        svc_cache_size = 200
+
+        clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, coef0=coef0,
+                      degree=degree, gamma=gamma, kernel=kernel)
+
+        t = time()
+        svc_gen_error_list = []
+        num_experiments = 100
+        print "Running %d experiments... \n" % num_experiments
+        for i in range(num_experiments):
+            print "Running experiment: %d" % (i + 1)
+            # sorting not necessary, np.array not necessary
+            tr_idx = np.random.choice(num_samples, num_train_samples,
+                                      replace=False)
+            ts_idx = list(set(range(num_samples)) - set(list(tr_idx)))
+            trX = trx_all[tr_idx, :]
+            trY = try_all[tr_idx]
+            tsX = trx_all[ts_idx, :]
+            tsY = try_all[ts_idx]
+
+            clf.fit(trX, trY)
+            ftest = clf.predict(tsX)
+
+            print "Print something to check solution quality..."
+            num_wrong = 1 * (ftest != tsY).sum()
+            svc_gen_error_list.append(num_wrong / float(num_test_samples))
+
+        if kernel == 'rbf':
+            pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                       'ml_center_project\\ml_center_results\\'
+            filename = 'svc_iris12_gen_error_%s_gamma_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, gamma, coef0, svc_C, myseed, num_experiments)
+            f = open(pathname + filename, 'w')
+            pickle.dump(svc_gen_error_list, f)
+            f.close()
+        elif kernel == 'poly':
+            pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                       'ml_center_project\\ml_center_results\\'
+            filename = 'svc_iris12_gen_error_%s_degree_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, degree, coef0, svc_C, myseed, num_experiments)
+            f = open(pathname + filename, 'w')
+            pickle.dump(svc_gen_error_list, f)
+            f.close()
+        else:
+            # Linear kernel: degree = 1, coef0 = 0
+            pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                       'ml_center_project\\ml_center_results\\'
+            filename = 'svc_iris12_gen_error_%s_degree_1_coef_0_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
+                       % (kernel, myseed, svc_C, num_experiments)
+            f = open(pathname + filename, 'w')
+            pickle.dump(svc_gen_error_list, f)
+            f.close()
+
+        print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
+            np.array(svc_gen_error_list)
+        print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
+              % num_experiments, "%.3f" % np.array(svc_gen_error_list).mean()
+        print "Elapsed time %4.1f seconds." % (time() - t)
+    elif user_in == 9:
+        print "(9) SVC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
         #####################################################################
         # Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -326,7 +429,7 @@ if __name__ == '__main__':
         if kernel == 'rbf':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'svc_gen_error_%s_gamma_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
+            filename = 'svc_bc_gen_error_%s_gamma_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
                        % (kernel, gamma, coef0, svc_C, myseed, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(svc_gen_error_list, f)
@@ -334,7 +437,7 @@ if __name__ == '__main__':
         elif kernel == 'poly':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'svc_gen_error_%s_degree_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
+            filename = 'svc_bc_gen_error_%s_degree_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
                        % (kernel, degree, coef0, svc_C, myseed, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(svc_gen_error_list, f)
@@ -343,7 +446,7 @@ if __name__ == '__main__':
             # Linear kernel: degree = 1, coef0 = 0
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'svc_gen_error_%s_degree_1_coef_0_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
+            filename = 'svc_bc_gen_error_%s_degree_1_coef_0_svc_C_%4.4f_seed_%d_num_exper_%d.pickle' \
                        % (kernel, myseed, svc_C, num_experiments)
             f = open(pathname + filename, 'w')
             pickle.dump(svc_gen_error_list, f)

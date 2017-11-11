@@ -220,27 +220,12 @@ class FastKernelClassifier(object):
         bub_data = np.zeros((self.num_train_samples, 1))
         # print "aub_data = \n", aub_data
 
-        # Box constraints lower
-        aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
-                                   np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
-                                   -np.ones((self.num_train_samples+1, 1))))
-        bub_box_lower = np.ones((self.num_train_samples+1, 1))
+        # Explicitly include lower bound and upper bound
+        lb = np.hstack((-np.ones(self.num_train_samples + 1),
+                        np.zeros(self.num_train_samples), -1e9))  # TODO: -grb.GRB.INFINITY
 
-        # Box constraints upper
-        aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
-                                   np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 3/7
-                                   -np.ones((self.num_train_samples+1, 1))))
-        bub_box_upper = np.ones((self.num_train_samples+1, 1))
-
-        # Box xi                                                                soft 4/7
-        aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
-                                -np.identity(self.num_train_samples),
-                                np.zeros((self.num_train_samples, 1))))
-        bub_box_xi = np.zeros((self.num_train_samples, 1))
-
-        # Putting it all together
-        aub = np.vstack((aub_data, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
-        bub = np.vstack((bub_data, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
+        ub = np.hstack((np.ones(self.num_train_samples + 1),
+                        1e9*np.ones(self.num_train_samples + 1)))  # TODO: grb.GRB.INFINITY
 
         # Using Gurobi
         m = grb.Model()
@@ -253,17 +238,20 @@ class FastKernelClassifier(object):
         m.setParam('Aggregate', 0)
 
         # m.set(grb.GRB_IntParam_OutputFlag, 0)
-        J = range(2 * self.num_train_samples + 2)
-        I = range(4 * self.num_train_samples + 2)
-        x = [m.addVar(lb=-grb.GRB.INFINITY, ub=grb.GRB.INFINITY,
-                      obj=c[j], vtype=grb.GRB.CONTINUOUS,
-                      name="weight " + str(j + 1)) for j in J]
+        varlist = range(2 * self.num_train_samples + 2)
+
+        # Using lower bounds and upper bounds
+        x = [m.addVar(lb=lb[j], ub=ub[j], obj=c[j],
+                      vtype=grb.GRB.CONTINUOUS,
+                      name="weight " + str(j + 1)) for j in varlist]
         m.update()
 
         pr = cProfile.Profile()
         pr.enable()
 
-        constraints = [m.addConstr(grb.quicksum(aub[i, j] * x[j] for j in J) <= bub[i]) for i in I]
+        # range(self.num_train_samples) is constraint list
+        constraints = [m.addConstr(grb.quicksum(aub_data[i, j] * x[j] for j in varlist)
+                                   <= bub_data[i]) for i in range(self.num_train_samples)]
         m.update()
 
         print "+++++++++++++++++++++++++++++++++++++++++++"
@@ -271,7 +259,7 @@ class FastKernelClassifier(object):
         pr.print_stats(sort='time')
 
         m.optimize()
-        weight_opt = [x[j].x for j in J]
+        weight_opt = [x[j].x for j in varlist]
         # last element is epsilon
         # self.weight_opt = weight_opt[:-1]
         self.weight_opt = weight_opt[:-(1+self.num_train_samples)]                       # soft 7/7

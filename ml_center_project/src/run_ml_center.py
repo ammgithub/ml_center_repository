@@ -20,8 +20,7 @@ __author__ = 'amm'
 __date__ = "Oct 25, 2017"
 __version__ = 0.0
 
-np.set_printoptions(linewidth=100, edgeitems='all', suppress=True,
-                    precision=4)
+np.set_printoptions(precision=4, edgeitems=None, linewidth=100, suppress=True)
 
 if __name__ == '__main__':
     """
@@ -44,6 +43,7 @@ if __name__ == '__main__':
     print 2 * " " + "(9) FKC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
     print 80 * "-"
 
+    user_in = 0
     bad_input = True
     while bad_input:
         try:
@@ -165,7 +165,11 @@ if __name__ == '__main__':
         trY = [1, 1, 1, 1, -1, -1, -1, -1]
         tsX = np.array([[0, 2], [3, 3], [6, 3]])
         tsY = [1, -1, 1]
-        kernel = 'rbf'; degree = 2; gamma = 0.1; coef0 = 1; Csoft = 1000.
+        kernel = 'rbf'
+        degree = 2
+        gamma = 0.1
+        coef0 = 1
+        Csoft = 1000.
 
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
               % (kernel, degree, gamma, coef0, Csoft)
@@ -289,10 +293,10 @@ if __name__ == '__main__':
         assert num_train_samples + num_test_samples == num_samples, \
             "Please check the number of training and test samples. "
 
-        kernel = 'poly';
-        degree = 2;
-        gamma = 1;
-        coef0 = 1;
+        kernel = 'poly'
+        degree = 2
+        gamma = 1
+        coef0 = 1
         Csoft = 10
 
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
@@ -370,7 +374,11 @@ if __name__ == '__main__':
         trX = scaler.fit_transform(trX)
         trY = bc_data.target
         trY = np.array([i if i == 1 else -1 for i in trY])
-        kernel = 'rbf'; degree = 1; gamma = 8; coef0 = 1; Csoft = 10000
+        kernel = 'rbf'
+        degree = 1
+        gamma = 8
+        coef0 = 1
+        Csoft = 10000
 
         print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
@@ -434,10 +442,10 @@ if __name__ == '__main__':
         assert num_train_samples + num_test_samples == num_samples, \
             "Please check the number of training and test samples. "
 
-        kernel = 'rbf';
-        degree = 2;
-        gamma = 12;
-        coef0 = 1;
+        kernel = 'rbf'
+        degree = 2
+        gamma = 12
+        coef0 = 1
         Csoft = 10
 
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,

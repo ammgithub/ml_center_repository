@@ -7,17 +7,19 @@ Machine learning and another center (other than the analytic center)
 
 import numpy as np
 from scipy.optimize import linprog as lp
-from sklearn import svm
 from sklearn.metrics.pairwise import pairwise_kernels
 import matplotlib.pyplot as plt
 import warnings
+import gurobipy as grb
+import cProfile
 
 __author__ = 'amm'
 __date__ = "Oct 18, 2017"
 __version__ = 0.0
 
-np.set_printoptions(linewidth=100, edgeitems='all', suppress=True,
+np.set_printoptions(linewidth=100, edgeitems=None, suppress=True,
                     precision=4)
+
 
 class FastKernelClassifier(object):
     """
@@ -59,7 +61,6 @@ class FastKernelClassifier(object):
 
     Examples
     --------
-    >>> fkc = FastKernelClassifier()
     >>> fkc = FastKernelClassifier(kernel='poly', degree=3, gamma=1, coef0=1)
 
     Elaborate example (OR problem)
@@ -80,13 +81,22 @@ class FastKernelClassifier(object):
     References
     ----------
     """
-    def __init__(self, kernel='linear', degree=3, gamma=1, coef0=0.0, Csoft=10000.0,
-                 verbose=False):
+    def __init__(self, kernel='linear', degree=3, gamma=1, coef0=0.0, Csoft=10000.0):
         self.kernel = kernel
         self.degree = degree
         self.gamma = gamma
         self.coef0 = coef0
         self.Csoft = Csoft
+
+        self.trainx = None
+        self.trainy = None
+        self.num_train_samples = None
+        self.num_features = None
+
+        self.weight_opt = None
+        self.pen_opt = None
+        self.eps_opt = None
+        self.fun_opt = None
 
     def fit(self, trainx, trainy):
         """
@@ -125,35 +135,36 @@ class FastKernelClassifier(object):
         # self.kmat = kmat
         # print "self.trainx = \n", self.trainx
         # print "kmat = \n", kmat
-        Aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
+        aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
                               -np.ones((self.num_train_samples, 1))))
         bub_data = np.zeros((self.num_train_samples, 1))
-        # print "Aub_data = \n", Aub_data
+        # print "aub_data = \n", aub_data
 
         # Box constraints lower
-        Aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
+        aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
                                    np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
                                    -np.ones((self.num_train_samples+1, 1))))
         bub_box_lower = np.ones((self.num_train_samples+1, 1))
 
         # Box constraints upper
-        Aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
+        aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
                                    np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 3/7
                                    -np.ones((self.num_train_samples+1, 1))))
         bub_box_upper = np.ones((self.num_train_samples+1, 1))
 
         # Box xi                                                                soft 4/7
-        Aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
+        aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
                                 -np.identity(self.num_train_samples),
                                 np.zeros((self.num_train_samples, 1))))
         bub_box_xi = np.zeros((self.num_train_samples, 1))
 
         # Putting it all together
-        Aub = np.vstack((Aub_data, Aub_box_lower, Aub_box_upper, Aub_box_xi))       # soft 6/7
+        aub = np.vstack((aub_data, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
         bub = np.vstack((bub_data, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
 
         # # Using scipy lp solver
-        res = lp(c=c, A_ub=Aub, b_ub=bub, bounds=(None, None))
+        res = lp(c=c, A_ub=aub, b_ub=bub, bounds=(None, None))
+
         weight_opt = res.x
         print "weight_opt = \n", weight_opt
         # last element is epsilon
@@ -183,7 +194,7 @@ class FastKernelClassifier(object):
         self : object
 
         """
-        import gurobipy as grb
+        # import gurobipy as grb
         [self.num_train_samples, self.num_features] = trainx.shape
 
         # Need trainx and testx in 'predict', need trainy in 'plot2d'
@@ -204,31 +215,31 @@ class FastKernelClassifier(object):
         # self.kmat = kmat
         # print "self.trainx = \n", self.trainx
         # print "kmat = \n", kmat
-        Aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
+        aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
                               -np.ones((self.num_train_samples, 1))))
         bub_data = np.zeros((self.num_train_samples, 1))
-        # print "Aub_data = \n", Aub_data
+        # print "aub_data = \n", aub_data
 
         # Box constraints lower
-        Aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
+        aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
                                    np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
                                    -np.ones((self.num_train_samples+1, 1))))
         bub_box_lower = np.ones((self.num_train_samples+1, 1))
 
         # Box constraints upper
-        Aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
+        aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
                                    np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 3/7
                                    -np.ones((self.num_train_samples+1, 1))))
         bub_box_upper = np.ones((self.num_train_samples+1, 1))
 
         # Box xi                                                                soft 4/7
-        Aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
+        aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
                                 -np.identity(self.num_train_samples),
                                 np.zeros((self.num_train_samples, 1))))
         bub_box_xi = np.zeros((self.num_train_samples, 1))
 
         # Putting it all together
-        Aub = np.vstack((Aub_data, Aub_box_lower, Aub_box_upper, Aub_box_xi))       # soft 6/7
+        aub = np.vstack((aub_data, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
         bub = np.vstack((bub_data, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
 
         # Using Gurobi
@@ -246,10 +257,18 @@ class FastKernelClassifier(object):
         I = range(4 * self.num_train_samples + 2)
         x = [m.addVar(lb=-grb.GRB.INFINITY, ub=grb.GRB.INFINITY,
                       obj=c[j], vtype=grb.GRB.CONTINUOUS,
-                      name="weight " + str(j + 1)) for j in J]  # TODO: add name, continuous explicit?
+                      name="weight " + str(j + 1)) for j in J]
         m.update()
-        constraints = [m.addConstr(grb.quicksum(Aub[i, j] * x[j] for j in J) <= bub[i]) for i in I]
+
+        pr = cProfile.Profile()
+        pr.enable()
+
+        constraints = [m.addConstr(grb.quicksum(aub[i, j] * x[j] for j in J) <= bub[i]) for i in I]
         m.update()
+
+        print "+++++++++++++++++++++++++++++++++++++++++++"
+        pr.disable()
+        pr.print_stats(sort='time')
 
         m.optimize()
         weight_opt = [x[j].x for j in J]
@@ -344,13 +363,14 @@ def get_label_adjusted_train_kernel(trainx, trainy, **params):
 
     Parameters
     ----------
-    In    : trainx, input samples for training set (d by l)
-            trainy, labels for training set (d by 1) (flattened)
-            params = {  kernel,
+    :param trainx: input samples for training set (d by l)
+    :param trainy: labels for training set (d by 1) (flattened)
+
+    params = {  kernel,
                         degree,
                         gamma,
                         coef0}
-    Out   : Ktrain.T
+    :return: Ktrain.T
 
     Usage:
     ------
@@ -368,11 +388,12 @@ def get_label_adjusted_train_kernel(trainx, trainy, **params):
                                   gamma=params['gamma'])
     else:
         raise ValueError('Please check the selected kernel (\'%s\'). '
-                         'Exiting.' %params['kernel'])
+                         'Exiting.' % params['kernel'])
     # multiply by labels and add row, same K as in Trafalis Malyscheff, ACM, 2002
     Ktrain = np.array([ktrain[i, :] * trainy for i in range(len(ktrain[0, :]))])
     Ktrain = np.vstack((Ktrain, trainy))
     return Ktrain.T
+
 
 def get_label_adjusted_test_kernel(trainx, testx, **params):
     """
@@ -381,13 +402,14 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
 
     Parameters
     ----------
-    In    : trainx, input samples for training set (d by l)
-            testx, input samples for test set (d by num_test_samples)
+    :param trainx: input samples for training set (d by l)
+    :param testx: input samples for test set (d by num_test_samples)
+
             params = {  kernel,
                         degree,
                         gamma,
                         coef0}
-    Out   : Ktest.T
+    :return: Ktest.T
 
     Usage:
     ------
@@ -407,7 +429,7 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
                                  gamma=params['gamma'])
     else:
         raise ValueError('Please check the selected kernel (\'%s\'). '
-                         'Exiting.' %params['kernel'])
+                         'Exiting.' % params['kernel'])
 
     # add row of ones
     Ktest = np.vstack((ktest, np.ones((1, num_test_samples))))
@@ -427,7 +449,11 @@ if __name__ == '__main__':
     trY = [1, 1, 1, 1, -1, -1, -1, -1]
     tsX = np.array([[0, 2], [3, 3], [6, 3]])
     tsY = [1, -1, 1]
-    kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 0.1
+    kernel = 'poly'
+    degree = 2
+    gamma = 1
+    coef0 = 1
+    Csoft = 0.1
 
     print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
           % (kernel, degree, gamma, coef0, Csoft)

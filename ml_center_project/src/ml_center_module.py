@@ -11,7 +11,6 @@ from sklearn.metrics.pairwise import pairwise_kernels
 import matplotlib.pyplot as plt
 import warnings
 import gurobipy as grb
-import cProfile
 
 __author__ = 'amm'
 __date__ = "Oct 18, 2017"
@@ -102,6 +101,12 @@ class FastKernelClassifier(object):
         """
         Compute the optimal weight vector to classify (trainx, trainy).
 
+        The variable aasigment for l = 4 samples is given by
+
+        x = (a1, a2, a3, a4, b, xi1, xi2, xi3, xi4, eps)
+
+        leading to 2*l + 2 = 10 variables.
+
         Parameters
         ----------
         trainx : numpy array of floats, num_train_samples-by-num_features
@@ -181,6 +186,12 @@ class FastKernelClassifier(object):
         Same as the fit method, however, using Gurobi.
         Compute the optimal weight vector to classify (trainx, trainy) using Gurobi.
 
+        The variable aasigment for l = 4 samples is given by
+
+        x = (a1, a2, a3, a4, b, xi1, xi2, xi3, xi4, eps)
+
+        leading to 2*l + 2 = 10 variables.
+
         Parameters
         ----------
         trainx : numpy array of floats, num_train_samples-by-num_features
@@ -201,10 +212,6 @@ class FastKernelClassifier(object):
         self.trainx = trainx
         self.trainy = trainy
 
-        # Objective function
-        c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
-                       self.Csoft*np.ones((self.num_train_samples, 1)), 1)).flatten()        # soft 5/7
-
         # Constraints from data (halfspaces)
         kmat = get_label_adjusted_train_kernel(trainx, trainy,
                                                kernel=self.kernel,
@@ -215,53 +222,59 @@ class FastKernelClassifier(object):
         # self.kmat = kmat
         # print "self.trainx = \n", self.trainx
         # print "kmat = \n", kmat
+
+        # Objective function
+        c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
+                       self.Csoft*np.ones((self.num_train_samples, 1)), 1)).flatten()        # soft 5/7
+
         aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
                               -np.ones((self.num_train_samples, 1))))
-        bub_data = np.zeros((self.num_train_samples, 1))
-        # print "aub_data = \n", aub_data
-
-        # Explicitly include lower bound and upper bound
+        bub_data = np.zeros(self.num_train_samples)
         lb = np.hstack((-np.ones(self.num_train_samples + 1),
-                        np.zeros(self.num_train_samples), -1e9))  # TODO: -grb.GRB.INFINITY
-
+                        np.zeros(self.num_train_samples), -1e9))
         ub = np.hstack((np.ones(self.num_train_samples + 1),
-                        1e9*np.ones(self.num_train_samples + 1)))  # TODO: grb.GRB.INFINITY
+                        1e9*np.ones(self.num_train_samples + 1)))
+
+        # Speed improvement in Gurobi due to as dictionary inconclusive
+        aub_data_dict = {i: {j: v for j, v in enumerate(row)}
+                         for i, row in enumerate(aub_data)}
 
         # Using Gurobi
         m = grb.Model()
 
         # Switch off console output
-        # m.Params.OutputFlag = 1
-        m.setParam('OutputFlag', 1)
-        m.setParam('Method', 1)
-        m.setParam('TimeLimit', 1)
-        m.setParam('Aggregate', 0)
+        m.setParam('OutputFlag', 0)
+        m.setParam('Method', 1)  # dual simplex
+        # m.setParam('TimeLimit', 1)
+        # m.setParam('Aggregate', 0)
 
         # m.set(grb.GRB_IntParam_OutputFlag, 0)
-        varlist = range(2 * self.num_train_samples + 2)
+        var_list = range(2 * self.num_train_samples + 2)
 
-        # Using lower bounds and upper bounds
-        x = [m.addVar(lb=lb[j], ub=ub[j], obj=c[j],
-                      vtype=grb.GRB.CONTINUOUS,
-                      name="weight " + str(j + 1)) for j in varlist]
+        # Using a list
+        # xold = [m.addVar(lb=lb[j], ub=ub[j], obj=c[j],
+        #                  vtype=grb.GRB.CONTINUOUS) for j in var_list]
+
+        # Using a dictionary, but speed-up inconclusive
+        x = {j: m.addVar(lb=lb[j], ub=ub[j], obj=c[j], vtype=grb.GRB.CONTINUOUS)
+             for j in var_list}
         m.update()
 
-        pr = cProfile.Profile()
-        pr.enable()
-
-        # range(self.num_train_samples) is constraint list
-        constraints = [m.addConstr(grb.quicksum(aub_data[i, j] * x[j] for j in varlist)
-                                   <= bub_data[i]) for i in range(self.num_train_samples)]
-        m.update()
-
-        print "+++++++++++++++++++++++++++++++++++++++++++"
-        pr.disable()
-        pr.print_stats(sort='time')
-
+        constr_list = range(self.num_train_samples)
+        for i in constr_list:
+            m.addConstr(grb.quicksum(x[j] * aub_data_dict[i][j]
+                                     for j in var_list) <= bub_data[i])
+            # m.addConstr(grb.quicksum(x[j] * aub_data[i, j]
+            #                          for j in var_list) <= bub_data[i])
         m.optimize()
-        weight_opt = [x[j].x for j in varlist]
-        # last element is epsilon
-        # self.weight_opt = weight_opt[:-1]
+
+        # pr = cProfile.Profile()
+        # pr.enable()
+        # print "+++++++++++++++++++++++++++++++++++++++++++"
+        # pr.disable()
+        # pr.print_stats(sort='time')
+
+        weight_opt = [x[j].x for j in var_list]
         self.weight_opt = weight_opt[:-(1+self.num_train_samples)]                       # soft 7/7
         self.pen_opt = weight_opt[(1+self.num_train_samples):-1]
         self.eps_opt = weight_opt[-1]

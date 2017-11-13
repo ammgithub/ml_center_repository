@@ -13,6 +13,7 @@ import numpy as np
 from ml_center_module import FastKernelClassifier
 from sklearn import datasets
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 from time import time
 import pickle
 
@@ -429,42 +430,29 @@ if __name__ == '__main__':
         # Improve performance by reshuffling all samples before train-test split
         tr_all = np.hstack((trx_all, try_all.reshape(len(try_all), 1)))
         np.random.shuffle(tr_all)
-        trx_all = tr_all[:, :30]
-        try_all = tr_all[:, 30]
-
-        (num_samples, num_features) = trx_all.shape
-
-        # Training-to-test ratio of 67% : 33% (Bennett, Mangasarian, 1992)
-        train_ratio = 0.67
-        test_ratio = 0.33
-        num_train_samples = int(round(.67*num_samples, 0))  # 381 train
-        num_test_samples = int(round(.33*num_samples, 0))  # 188 test
-        assert num_train_samples + num_test_samples == num_samples, \
-            "Please check the number of training and test samples. "
 
         kernel = 'rbf'
         degree = 2
         gamma = 12
         coef0 = 1
-        Csoft = 10
+        Csoft = 10000
 
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                    coef0=coef0, Csoft=Csoft)
 
         t = time()
         fkc_gen_error_list = []
-        num_experiments = 1
+        num_experiments = 100
         print "Running %d experiments... \n" % num_experiments
         for i in range(num_experiments):
             print "Running experiment: %d" % (i+1)
-            # sorting not necessary, np.array not necessary
-            tr_idx = np.random.choice(num_samples, num_train_samples,
-                                             replace=False)
-            ts_idx = list(set(range(num_samples)) - set(list(tr_idx)))
-            trX = trx_all[tr_idx, :]
-            trY = try_all[tr_idx]
-            tsX = trx_all[ts_idx, :]
-            tsY = try_all[ts_idx]
+            # 381 train and 188 test samples
+            train_set, test_set = train_test_split(tr_all, test_size=0.33)
+            trX = train_set[:, :30]
+            trY = train_set[:, 30]
+            tsX = test_set[:, :30]
+            tsY = test_set[:, 30]
+            (num_test_samples, num_features) = tsX.shape
 
             fkc.fit_grb(trX, trY)
             # fkc.fit(trX, trY)

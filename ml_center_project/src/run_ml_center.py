@@ -69,7 +69,12 @@ if __name__ == '__main__':
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.013  # no solution
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.015  # solution
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.017  # solution
-        kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 100
+        kernel = 'poly'
+        degree = 2
+        gamma = 1
+        coef0 = 1
+        Csoft = 100
+
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
@@ -103,7 +108,12 @@ if __name__ == '__main__':
 
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.10000  # shift in separator
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.00001  # incomplete sep
-        kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 100
+        kernel = 'poly'
+        degree = 1
+        gamma = 1
+        coef0 = 1
+        Csoft = 100
+
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
@@ -135,7 +145,11 @@ if __name__ == '__main__':
         tsX = np.array([[0, 2], [3, 3], [6, 3]])
         tsY = [1, -1, 1]
         # kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 0.10000  # one point misclass
-        kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 1000
+        kernel = 'poly'
+        degree = 2
+        gamma = 1
+        coef0 = 1
+        Csoft = 1000
 
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
               % (kernel, degree, gamma, coef0, Csoft)
@@ -205,7 +219,12 @@ if __name__ == '__main__':
         trX = trX[:, [0, 1]]
         trY = iris.target[:100]
         trY = [i if i == 1 else -1 for i in trY]
-        kernel = 'linear'; degree = 1; gamma = 1; coef0 = 1; Csoft = 10000
+
+        kernel = 'linear'
+        degree = 1
+        gamma = 1
+        coef0 = 1
+        Csoft = 10000
 
         print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
@@ -313,19 +332,20 @@ if __name__ == '__main__':
             num_wrong = 1 * (ftest != tsY).sum()
             fkc_gen_error_list.append(num_wrong / float(num_test_samples))
 
+        fkc_gen_error = np.array(fkc_gen_error_list).mean()
         if kernel == 'rbf':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                        'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_iris12_gen_error_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB.pickle' \
-                       % (kernel, gamma, coef0, Csoft, myseed, num_experiments)
+            filename = 'fkc_iris12_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+                       % (kernel, gamma, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
         elif kernel == 'poly':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                        'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_iris12_gen_error_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, degree, coef0, Csoft, myseed, num_experiments)
+            filename = 'fkc_iris12_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+                       % (kernel, degree, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
@@ -333,8 +353,8 @@ if __name__ == '__main__':
             # Linear kernel: degree = 1, coef0 = 0
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                        'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_iris12_gen_error_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, Csoft, myseed, num_experiments)
+            filename = 'fkc_iris12_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+                       % (kernel, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
@@ -342,7 +362,7 @@ if __name__ == '__main__':
         print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
             np.array(fkc_gen_error_list)
         print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
-              % num_experiments, "%.3f" % np.array(fkc_gen_error_list).mean()
+              % num_experiments, "%.3f" % fkc_gen_error
         print "Elapsed time %4.1f seconds." % (time() - t)
     elif user_in == 8:
         print "(8) FKC: Testing BREAST CANCER dataset (all samples) \n"
@@ -415,7 +435,7 @@ if __name__ == '__main__':
 
         kernel = 'rbf'
         degree = 2
-        gamma = 12
+        gamma = 2
         coef0 = 1
         Csoft = 10000
 
@@ -442,19 +462,20 @@ if __name__ == '__main__':
             num_wrong = 1 * (ftest != tsY).sum()
             fkc_gen_error_list.append(num_wrong / float(num_test_samples))
 
+        fkc_gen_error = np.array(fkc_gen_error_list).mean()
         if kernel == 'rbf':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_bc_gen_error_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB.pickle' \
-                       % (kernel, gamma, coef0, Csoft, myseed, num_experiments)
+            filename = 'fkc_bc_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+                       % (kernel, gamma, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
         elif kernel == 'poly':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_bc_gen_error_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, degree, coef0, Csoft, myseed, num_experiments)
+            filename = 'fkc_bc_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+                       % (kernel, degree, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
@@ -462,8 +483,8 @@ if __name__ == '__main__':
             # Linear kernel: degree = 1, coef0 = 0
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_bc_gen_error_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d.pickle' \
-                       % (kernel, Csoft, myseed, num_experiments)
+            filename = 'fkc_bc_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+                       % (kernel, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
@@ -471,7 +492,7 @@ if __name__ == '__main__':
         print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
             np.array(fkc_gen_error_list)
         print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
-              % num_experiments, "%.3f" % np.array(fkc_gen_error_list).mean()
+              % num_experiments, "%.3f" % fkc_gen_error
         print "Elapsed time %4.1f seconds." % (time() - t)
     else:
         print "Invalid selection. Program terminating. "

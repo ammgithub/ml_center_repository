@@ -81,6 +81,22 @@ class FastKernelClassifier(object):
     ----------
     """
     def __init__(self, kernel='linear', degree=3, gamma=1, coef0=0.0, Csoft=10000.0):
+        """
+        :param kernel:
+        :type kernel:
+
+        :param degree:
+        :type degree:
+
+        :param gamma:
+        :type gamma:
+
+        :param coef0:
+        :type coef0:
+
+        :param Csoft:
+        :type Csoft:
+        """
         self.kernel = kernel
         self.degree = degree
         self.gamma = gamma

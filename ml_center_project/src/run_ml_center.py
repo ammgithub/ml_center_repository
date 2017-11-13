@@ -274,30 +274,15 @@ if __name__ == '__main__':
         #####################################################################
         myseed = 2
         np.random.seed(myseed)
+        pd.set_option('expand_frame_repr', False)
+        pd.set_option('display.max_rows', 400)
 
-        # All inputs and all labels
-        iris_data = datasets.load_iris()
+        # Use only iris setosa and iris versicolor
         scaler = MinMaxScaler()
-        trx_all = iris_data.data[:100, :]
-        trx_all = scaler.fit_transform(trx_all)
+        iris_data = datasets.load_iris()
+        df = pd.DataFrame(scaler.fit_transform(iris_data.data[:100, :]))
         y = iris_data.target[:100]
         y = np.array([i if i == 1 else -1 for i in y])
-
-        # Improve performance by reshuffling all samples before train-test split
-        tr_all = np.hstack((trx_all, y.reshape(len(y), 1)))
-        np.random.shuffle(tr_all)
-        trx_all = tr_all[:, :4]
-        y = tr_all[:, 4]
-
-        (num_samples, num_features) = trx_all.shape
-
-        # Training-to-test ratio of 67% : 33% (Bennett, Mangasarian, 1992)
-        train_ratio = 0.67
-        test_ratio = 0.33
-        num_train_samples = int(round(.67 * num_samples, 0))  # 67 train
-        num_test_samples = int(round(.33 * num_samples, 0))  # 33 test
-        assert num_train_samples + num_test_samples == num_samples, \
-            "Please check the number of training and test samples. "
 
         kernel = 'poly'
         degree = 2
@@ -314,18 +299,13 @@ if __name__ == '__main__':
         print "Running %d experiments... \n" % num_experiments
         for i in range(num_experiments):
             print "Running experiment: %d" % (i + 1)
-            # sorting not necessary, np.array not necessary
-            tr_idx = np.random.choice(num_samples, num_train_samples,
-                                      replace=False)
-            ts_idx = list(set(range(num_samples)) - set(list(tr_idx)))
-            trX = trx_all[tr_idx, :]
-            trY = y[tr_idx]
-            tsX = trx_all[ts_idx, :]
-            tsY = y[ts_idx]
+            # 67 train and 33 test samples
+            trX, tsX, trY, tsY = train_test_split(df, y, test_size=0.33)
+            (num_test_samples, num_features) = tsX.as_matrix().shape
 
-            fkc.fit_grb(trX, trY)
+            fkc.fit_grb(trX.as_matrix(), trY)
             # fkc.fit(trX, trY)
-            ftest = fkc.predict(tsX)
+            ftest = fkc.predict(tsX.as_matrix())
             print "fkc.eps_opt = ", fkc.eps_opt
             # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
             # print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt

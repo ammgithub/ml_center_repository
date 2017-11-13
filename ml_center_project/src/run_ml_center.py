@@ -14,6 +14,7 @@ from ml_center_module import FastKernelClassifier
 from sklearn import datasets
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+import pandas as pd
 from time import time
 import pickle
 
@@ -237,7 +238,11 @@ if __name__ == '__main__':
         # trX = iris.data[:100, :]
         trY = iris.target[:100]
         trY = [i if i == 1 else -1 for i in trY]
-        kernel = 'linear'; degree = 1; gamma = 1; coef0 = 1; Csoft = 10000
+        kernel = 'linear'
+        degree = 1
+        gamma = 1
+        coef0 = 1
+        Csoft = 10000
 
         print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
@@ -275,14 +280,14 @@ if __name__ == '__main__':
         scaler = MinMaxScaler()
         trx_all = iris_data.data[:100, :]
         trx_all = scaler.fit_transform(trx_all)
-        try_all = iris_data.target[:100]
-        try_all = np.array([i if i == 1 else -1 for i in try_all])
+        y = iris_data.target[:100]
+        y = np.array([i if i == 1 else -1 for i in y])
 
         # Improve performance by reshuffling all samples before train-test split
-        tr_all = np.hstack((trx_all, try_all.reshape(len(try_all), 1)))
+        tr_all = np.hstack((trx_all, y.reshape(len(y), 1)))
         np.random.shuffle(tr_all)
         trx_all = tr_all[:, :4]
-        try_all = tr_all[:, 4]
+        y = tr_all[:, 4]
 
         (num_samples, num_features) = trx_all.shape
 
@@ -314,9 +319,9 @@ if __name__ == '__main__':
                                       replace=False)
             ts_idx = list(set(range(num_samples)) - set(list(tr_idx)))
             trX = trx_all[tr_idx, :]
-            trY = try_all[tr_idx]
+            trY = y[tr_idx]
             tsX = trx_all[ts_idx, :]
-            tsY = try_all[ts_idx]
+            tsY = y[ts_idx]
 
             fkc.fit_grb(trX, trY)
             # fkc.fit(trX, trY)
@@ -418,18 +423,15 @@ if __name__ == '__main__':
         #####################################################################
         myseed = 2
         np.random.seed(myseed)
+        pd.set_option('expand_frame_repr', False)
+        pd.set_option('display.max_rows', 400)
 
         # All inputs and all labels
-        bc_data = datasets.load_breast_cancer()
         scaler = MinMaxScaler()
-        trx_all = bc_data.data
-        trx_all = scaler.fit_transform(trx_all)
-        try_all = bc_data.target
-        try_all = np.array([i if i == 1 else -1 for i in try_all])
-
-        # Improve performance by reshuffling all samples before train-test split
-        tr_all = np.hstack((trx_all, try_all.reshape(len(try_all), 1)))
-        np.random.shuffle(tr_all)
+        bc_data = datasets.load_breast_cancer()
+        df = pd.DataFrame(scaler.fit_transform(bc_data.data))
+        y = bc_data.target
+        y = np.array([i if i == 1 else -1 for i in y])
 
         kernel = 'rbf'
         degree = 2
@@ -447,16 +449,12 @@ if __name__ == '__main__':
         for i in range(num_experiments):
             print "Running experiment: %d" % (i+1)
             # 381 train and 188 test samples
-            train_set, test_set = train_test_split(tr_all, test_size=0.33)
-            trX = train_set[:, :30]
-            trY = train_set[:, 30]
-            tsX = test_set[:, :30]
-            tsY = test_set[:, 30]
-            (num_test_samples, num_features) = tsX.shape
+            trX, tsX, trY, tsY = train_test_split(df, y, test_size=0.33)
+            (num_test_samples, num_features) = tsX.as_matrix().shape
 
-            fkc.fit_grb(trX, trY)
+            fkc.fit_grb(trX.as_matrix(), trY)
             # fkc.fit(trX, trY)
-            ftest = fkc.predict(tsX)
+            ftest = fkc.predict(tsX.as_matrix())
             print "fkc.eps_opt = ", fkc.eps_opt
             # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
             # print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt

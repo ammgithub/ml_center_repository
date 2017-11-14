@@ -380,7 +380,7 @@ if __name__ == '__main__':
         degree = 2
         gamma = 2
         coef0 = 1
-        svc_C = 10000
+        svc_C = 10
         svc_cache_size = 200
 
         clf = svm.SVC(C=svc_C, cache_size=svc_cache_size, coef0=coef0,

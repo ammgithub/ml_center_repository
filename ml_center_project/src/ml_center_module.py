@@ -476,8 +476,8 @@ if __name__ == '__main__':
           % (kernel, degree, gamma, coef0, Csoft)
     print "-----------------------------------------------------"
     fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-    fkc.fit_grb(trX, trY)
-    # fkc.fit(trX, trY)
+    # fkc.fit_grb(trX, trY)
+    fkc.fit(trX, trY)
     print "fkc.eps_opt = ", fkc.eps_opt
     print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
     print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt

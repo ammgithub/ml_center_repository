@@ -109,7 +109,7 @@ if __name__ == '__main__':
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.10000  # shift in separator
         # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.00001  # incomplete sep
         kernel = 'poly'
-        degree = 1
+        degree = 4
         gamma = 1
         coef0 = 1
         Csoft = 100
@@ -257,8 +257,8 @@ if __name__ == '__main__':
         # trX = iris.data[:100, :]
         trY = iris.target[:100]
         trY = [i if i == 1 else -1 for i in trY]
-        kernel = 'linear'
-        degree = 1
+        kernel = 'poly'
+        degree = 4
         gamma = 1
         coef0 = 1
         Csoft = 10000
@@ -380,11 +380,11 @@ if __name__ == '__main__':
         trX = scaler.fit_transform(trX)
         trY = bc_data.target
         trY = np.array([i if i == 1 else -1 for i in trY])
-        kernel = 'rbf'
-        degree = 1
+        kernel = 'poly'
+        degree = 4
         gamma = 8
         coef0 = 1
-        Csoft = 10000
+        Csoft = 10
 
         print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
@@ -433,8 +433,8 @@ if __name__ == '__main__':
         y = bc_data.target
         y = np.array([i if i == 1 else -1 for i in y])
 
-        kernel = 'rbf'
-        degree = 2
+        kernel = 'poly'
+        degree = 4
         gamma = 2
         coef0 = 1
         Csoft = 10000

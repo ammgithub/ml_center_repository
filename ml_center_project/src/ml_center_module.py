@@ -10,7 +10,7 @@ from scipy.optimize import linprog as lp
 from sklearn.metrics.pairwise import pairwise_kernels
 import matplotlib.pyplot as plt
 import warnings
-##import gurobipy as grb
+import gurobipy as grb
 
 __author__ = 'amm'
 __date__ = "Oct 18, 2017"
@@ -136,6 +136,7 @@ class FastKernelClassifier(object):
         self : object
 
         """
+        print "\nRunning Scipy Linprog...\n"
         [self.num_train_samples, self.num_features] = trainx.shape
 
         # Need trainx and testx in 'predict', need trainy in 'plot2d'
@@ -165,44 +166,39 @@ class FastKernelClassifier(object):
         ub = np.hstack((np.ones(self.num_train_samples + 1),
                         1e9*np.ones(self.num_train_samples + 1)))
         
-        self.c = c
-        self.aub_data = aub_data
-        self.bub_data = bub_data
-        self.lb = lb
-        self.ub = ub
+        # # Box constraints lower
+        # aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
+        #                            np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
+        #                            -np.ones((self.num_train_samples+1, 1))))
+        # bub_box_lower = np.ones((self.num_train_samples+1, 1))
+        #
+        # # Box constraints upper
+        # aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
+        #                            np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 3/7
+        #                            -np.ones((self.num_train_samples+1, 1))))
+        # bub_box_upper = np.ones((self.num_train_samples+1, 1))
+        #
+        # # Box xi                                                                soft 4/7
+        # aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
+        #                         -np.identity(self.num_train_samples),
+        #                         np.zeros((self.num_train_samples, 1))))
+        # bub_box_xi = np.zeros((self.num_train_samples, 1))
+        #
+        # # Putting it all together
+        # aub = np.vstack((aub_data, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
+        # bub = np.vstack((bub_data, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
+        #
+        # res = lp(c=c, A_ub=aub, b_ub=bub, bounds=(None, None))
 
-        # Box constraints lower
-        aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
-                                   np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
-                                   -np.ones((self.num_train_samples+1, 1))))
-        bub_box_lower = np.ones((self.num_train_samples+1, 1))
+        # Scipy lp solver: use bland option?)
+        res = lp(c=c, A_ub=aub_data, b_ub=bub_data, bounds=zip(lb, ub),
+                 options=dict(bland=True))
 
-        # Box constraints upper
-        aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
-                                   np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 3/7
-                                   -np.ones((self.num_train_samples+1, 1))))
-        bub_box_upper = np.ones((self.num_train_samples+1, 1))
+        if res.message == 'Optimization failed. Unable to ' \
+                          'find a feasible starting point.':
+            print res
 
-        # Box xi                                                                soft 4/7
-        aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
-                                -np.identity(self.num_train_samples),
-                                np.zeros((self.num_train_samples, 1))))
-        bub_box_xi = np.zeros((self.num_train_samples, 1))
-
-        # Putting it all together
-        aub = np.vstack((aub_data, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
-        bub = np.vstack((bub_data, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
-
-        # # Using scipy lp solver
-##        res = lp(c=c, A_ub=aub, b_ub=bub, bounds=(None, None))
-        res = lp(c=c, A_ub=aub_data, b_ub=bub_data, bounds=zip(lb, ub))
-
-        print res.x
-        print res.fun
         weight_opt = res.x
-        print "weight_opt = \n", weight_opt
-        # last element is epsilon
-        # self.weight_opt = weight_opt[:-1]
         self.weight_opt = weight_opt[:-(1+self.num_train_samples)]                       # soft 7/7
         self.pen_opt = weight_opt[(1+self.num_train_samples):-1]
         self.eps_opt = weight_opt[-1]
@@ -234,7 +230,7 @@ class FastKernelClassifier(object):
         self : object
 
         """
-        # import gurobipy as grb
+        print "\nRunning Gurobi...\n"
         [self.num_train_samples, self.num_features] = trainx.shape
 
         # Need trainx and testx in 'predict', need trainy in 'plot2d'
@@ -302,6 +298,8 @@ class FastKernelClassifier(object):
         # print "+++++++++++++++++++++++++++++++++++++++++++"
         # pr.disable()
         # pr.print_stats(sort='time')
+
+        self.m = m
 
         weight_opt = [x[j].x for j in var_list]
         self.weight_opt = weight_opt[:-(1+self.num_train_samples)]                       # soft 7/7
@@ -475,22 +473,27 @@ if __name__ == '__main__':
 
     # Testing extended CIRCLE
     print "FKC: Testing extended circular problem \n"
-    trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.5]])
+    # works with scipy (Scipy bug 'Optimization failed. Unable to find a feasible starting point.')
+    # trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [4, 5.5]])
+    # trY = [1, 1, 1, 1, -1, -1, -1, -1]
+    trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.]])
     trY = [1, 1, 1, 1, -1, -1, -1, -1]
     tsX = np.array([[0, 2], [3, 3], [6, 3]])
     tsY = [1, -1, 1]
+
     kernel = 'poly'
     degree = 2
     gamma = 1
     coef0 = 1
-    Csoft = 0.1
+    Csoft = 10.0
 
     print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
           % (kernel, degree, gamma, coef0, Csoft)
-    print "-----------------------------------------------------"
-    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-    # fkc.fit_grb(trX, trY)
-    fkc.fit(trX, trY)
+    print "-" * 70
+    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
+                               coef0=coef0, Csoft=Csoft)
+    fkc.fit_grb(trX, trY)
+    # fkc.fit(trX, trY)
     print "fkc.eps_opt = ", fkc.eps_opt
     print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
     print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -509,34 +512,40 @@ if __name__ == '__main__':
         print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
     fkc.plot2d(0.02)
 
-##    # Include a small dataset to run module: OR problem
-##    print "Testing OR:"
-##    trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-##    trY = [1, -1, 1, -1]
-##    tsX = np.array([[1, 2], [-3, 2], [6, -1]])
-##    tsY = [1, -1, 1]
-##    kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 10
-##
-##    print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.1f" \
-##       % (kernel, degree, gamma, coef0, Csoft)
-##    print "-----------------------------------------------------"
-##    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-####    fkc.fit_grb(trX, trY)
-##    fkc.fit(trX, trY)
-##    print "fkc.eps_opt = ", fkc.eps_opt
-##    print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-##    print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-##    print "fkc.fun_opt = ", fkc.fun_opt
-##    ftest = fkc.predict(tsX)
-##    print "tsX = \n", tsX
-##    print "fkc.predict(tsX) = \n", ftest
-##    print "tsY = \n", tsY
-##    if not (abs(ftest - tsY) <= 0.001).all():
-##        print "*** Test set not classified correctly. ***"
-##    ftest = fkc.predict(trX)
-##    print "trX = \n", trX
-##    print "fkc.predict(trX) = \n", ftest
-##    print "trY = \n", trY
-##    if not (abs(ftest - trY) <= 0.001).all():
-##        print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-##    # fkc.plot2d(0.02)
+    # # Include a small dataset to run module: OR problem
+    # print "Testing OR:"
+    # trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
+    # trY = [1, -1, 1, -1]
+    # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    # tsY = [1, -1, 1]
+    #
+    # kernel = 'poly'
+    # degree = 2
+    # gamma = 1
+    # coef0 = 1
+    # Csoft = 10
+    #
+    # print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+    #       % (kernel, degree, gamma, coef0, Csoft)
+    # print "-" * 70
+    # fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
+    #                            coef0=coef0, Csoft=Csoft)
+    # # fkc.fit_grb(trX, trY)
+    # fkc.fit(trX, trY)
+    # print "fkc.eps_opt = ", fkc.eps_opt
+    # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+    # print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+    # print "fkc.fun_opt = ", fkc.fun_opt
+    # ftest = fkc.predict(tsX)
+    # print "tsX = \n", tsX
+    # print "fkc.predict(tsX) = \n", ftest
+    # print "tsY = \n", tsY
+    # if not (abs(ftest - tsY) <= 0.001).all():
+    #     print "*** Test set not classified correctly. ***"
+    # ftest = fkc.predict(trX)
+    # print "trX = \n", trX
+    # print "fkc.predict(trX) = \n", ftest
+    # print "trY = \n", trY
+    # if not (abs(ftest - trY) <= 0.001).all():
+    #     print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+    # fkc.plot2d(0.02)

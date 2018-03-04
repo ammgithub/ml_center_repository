@@ -1,5 +1,5 @@
 """
-Created on October 18, 2017
+Created on November 29, 2017
 
 Machine learning and another center (other than the analytic center)
 
@@ -165,7 +165,13 @@ class FastKernelClassifier(object):
                         np.zeros(self.num_train_samples), -1e9))
         ub = np.hstack((np.ones(self.num_train_samples + 1),
                         1e9*np.ones(self.num_train_samples + 1)))
-        
+
+        print "c = \n", c
+        print "aub_data = \n", aub_data
+        print "bub_data = \n", bub_data
+        print "lb = \n", lb
+        print "ub = \n", ub
+
         # # Box constraints lower
         # aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
         #                            np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
@@ -471,67 +477,29 @@ if __name__ == '__main__':
     import os
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
-    # Testing extended CIRCLE
-    print "FKC: Testing extended circular problem \n"
-    # works with scipy (Scipy bug 'Optimization failed. Unable to find a feasible starting point.')
-    # trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [4, 5.5]])
+    # # Testing extended CIRCLE
+    # print "FKC: Testing extended circular problem \n"
+    # # works with scipy (Scipy bug 'Optimization failed. Unable to find a feasible starting point.')
+    # # trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [4, 5.5]])
+    # # trY = [1, 1, 1, 1, -1, -1, -1, -1]
+    # trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.]])
     # trY = [1, 1, 1, 1, -1, -1, -1, -1]
-    trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.]])
-    trY = [1, 1, 1, 1, -1, -1, -1, -1]
-    tsX = np.array([[0, 2], [3, 3], [6, 3]])
-    tsY = [1, -1, 1]
-
-    kernel = 'poly'
-    degree = 2
-    gamma = 1
-    coef0 = 1
-    Csoft = 10.0
-
-    print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
-          % (kernel, degree, gamma, coef0, Csoft)
-    print "-" * 70
-    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
-                               coef0=coef0, Csoft=Csoft)
-    fkc.fit_grb(trX, trY)
-    # fkc.fit(trX, trY)
-    print "fkc.eps_opt = ", fkc.eps_opt
-    print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-    print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-    print "fkc.fun_opt = ", fkc.fun_opt
-    ftest = fkc.predict(tsX)
-    print "tsX = \n", tsX
-    print "fkc.predict(tsX) = \n", ftest
-    print "tsY = \n", tsY
-    if not (abs(ftest - tsY) <= 0.001).all():
-        print "*** Test set not classified correctly. ***"
-    ftest = fkc.predict(trX)
-    print "trX = \n", trX
-    print "fkc.predict(trX) = \n", ftest
-    print "trY = \n", trY
-    if not (abs(ftest - trY) <= 0.001).all():
-        print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-    fkc.plot2d(0.02)
-
-    # # Include a small dataset to run module: OR problem
-    # print "Testing OR:"
-    # trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-    # trY = [1, -1, 1, -1]
-    # tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    # tsX = np.array([[0, 2], [3, 3], [6, 3]])
     # tsY = [1, -1, 1]
     #
     # kernel = 'poly'
     # degree = 2
     # gamma = 1
     # coef0 = 1
-    # Csoft = 10
+    # Csoft = 10.0
     #
     # print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
     #       % (kernel, degree, gamma, coef0, Csoft)
     # print "-" * 70
     # fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
     #                            coef0=coef0, Csoft=Csoft)
-    # # fkc.fit_grb(trX, trY)
-    # fkc.fit(trX, trY)
+    # fkc.fit_grb(trX, trY)
+    # # fkc.fit(trX, trY)
     # print "fkc.eps_opt = ", fkc.eps_opt
     # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
     # print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
@@ -549,3 +517,41 @@ if __name__ == '__main__':
     # if not (abs(ftest - trY) <= 0.001).all():
     #     print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
     # fkc.plot2d(0.02)
+
+    # Include a small dataset to run module: OR problem
+    print "Testing OR:"
+    trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
+    trY = [1, -1, 1, -1]
+    tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+    tsY = [1, -1, 1]
+
+    kernel = 'poly'
+    degree = 2
+    gamma = 1
+    coef0 = 1
+    Csoft = 22222
+
+    print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+          % (kernel, degree, gamma, coef0, Csoft)
+    print "-" * 70
+    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
+                               coef0=coef0, Csoft=Csoft)
+    # fkc.fit_grb(trX, trY)
+    fkc.fit(trX, trY)
+    print "fkc.eps_opt = ", fkc.eps_opt
+    print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+    print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+    print "fkc.fun_opt = ", fkc.fun_opt
+    ftest = fkc.predict(tsX)
+    print "tsX = \n", tsX
+    print "fkc.predict(tsX) = \n", ftest
+    print "tsY = \n", tsY
+    if not (abs(ftest - tsY) <= 0.001).all():
+        print "*** Test set not classified correctly. ***"
+    ftest = fkc.predict(trX)
+    print "trX = \n", trX
+    print "fkc.predict(trX) = \n", ftest
+    print "trY = \n", trY
+    if not (abs(ftest - trY) <= 0.001).all():
+        print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+    fkc.plot2d(0.02)

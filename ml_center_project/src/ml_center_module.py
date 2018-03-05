@@ -60,16 +60,16 @@ class FastKernelClassifier(object):
 
     Examples
     --------
-    >>> fkc = FastKernelClassifier(kernel='poly', degree=3, gamma=1, coef0=1)
+    >>> fkc = FastKernelClassifier(kernel='poly', degree=3, gamma=1, coef0=1, Csoft=10000)
 
     Elaborate example (OR problem)
     ------------------------------
-    >>> trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-    >>> trY = [1, -1, 1, -1]
+    >>> trX = np.array([[1, 1], [-1, 1], [1, -1], [-1, -1]])
+    >>> trY = [1, -1, -1, 1]
     >>> tsX = np.array([[1, 2], [-3, 2], [6, -1]])
     >>> tsY = [1, -1, 1]
-    >>> kernel = 'rbf'; degree = 2; gamma = 1; coef0 = 1
-    >>> fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0)
+    >>> kernel = 'rbf'; degree = 2; gamma = 1; coef0 = 1; Csoft = 10000
+    >>> fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
     >>> fkc.fit(trX, trY)
     >>> ftest = fkc.predict(tsX)
     >>> fkc.plot2d(0.02)
@@ -115,11 +115,12 @@ class FastKernelClassifier(object):
 
     def fit(self, trainx, trainy):
         """
-        Compute the optimal weight vector to classify (trainx, trainy).
+        Compute the optimal weight vector to classify (trainx, trainy) using the
+        Scipy function 'linprog'.
 
         The variable aasigment for l = 4 samples is given by
 
-        x = (a1, a2, a3, a4, b, xi1, xi2, xi3, xi4, eps)
+        x = (alpha_1, alpha_2, alpha_3, alpha_4, b, xi_1, xi_2, xi_3, xi_4, eps)
 
         leading to 2*l + 2 = 10 variables.
 
@@ -136,41 +137,54 @@ class FastKernelClassifier(object):
         self : object
 
         """
-        print "\nRunning Scipy Linprog...\n"
+        print "\nFitting parameters using Scipy linprog...\n"
         [self.num_train_samples, self.num_features] = trainx.shape
 
         # Need trainx and testx in 'predict', need trainy in 'plot2d'
         self.trainx = trainx
         self.trainy = trainy
 
-        # Constraints from data (halfspaces)
-        kmat = get_label_adjusted_train_kernel(trainx, trainy,
+        # Constraints from data (halfspaces), this is the transpose of K
+        Ktraintrans = get_label_adjusted_train_kernel(trainx, trainy,
                                                kernel=self.kernel,
                                                degree=self.degree,
                                                gamma=self.gamma,
                                                coef0=self.coef0)
 
-        # self.kmat = kmat
+        # self.Ktraintrans = Ktraintrans
         # print "self.trainx = \n", self.trainx
-        # print "kmat = \n", kmat
+        # print "Ktraintrans = \n", Ktraintrans
 
         # Objective function
         c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
                        self.Csoft*np.ones((self.num_train_samples, 1)), 1)).flatten()        # soft 5/7
 
-        aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
+        A_ub = np.hstack((-Ktraintrans, -np.eye(self.num_train_samples),           # soft 1/7
                               -np.ones((self.num_train_samples, 1))))
-        bub_data = np.zeros((self.num_train_samples, 1))  # linprog needs column vector NO!
+        b_ub = np.zeros((self.num_train_samples, 1))  # linprog needs column vector NO!
         lb = np.hstack((-np.ones(self.num_train_samples + 1),
                         np.zeros(self.num_train_samples), -1e9))
         ub = np.hstack((np.ones(self.num_train_samples + 1),
                         1e9*np.ones(self.num_train_samples + 1)))
 
         print "c = \n", c
-        print "aub_data = \n", aub_data
-        print "bub_data = \n", bub_data
+        print "A_ub = \n", A_ub
+        print "b_ub = \n", b_ub
         print "lb = \n", lb
         print "ub = \n", ub
+
+        ######################################################################
+        #  The set of constraints below implement
+        #
+        #  -eps <= alpha <= eps
+        #
+        #  and not
+        #
+        #   -1  <= alpha <=  1
+        #
+        #  and will be removed in the next commit.
+        ######################################################################
+
 
         # # Box constraints lower
         # aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
@@ -191,13 +205,13 @@ class FastKernelClassifier(object):
         # bub_box_xi = np.zeros((self.num_train_samples, 1))
         #
         # # Putting it all together
-        # aub = np.vstack((aub_data, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
-        # bub = np.vstack((bub_data, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
+        # A_ub_all = np.vstack((A_ub, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
+        # b_ub_all = np.vstack((b_ub, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
         #
-        # res = lp(c=c, A_ub=aub, b_ub=bub, bounds=(None, None))
+        # res = lp(c=c, A_ub=A_ub_all, b_ub=b_ub_all, bounds=(None, None))
 
         # Scipy lp solver: use bland option?)
-        res = lp(c=c, A_ub=aub_data, b_ub=bub_data, bounds=zip(lb, ub),
+        res = lp(c=c, A_ub=A_ub, b_ub=b_ub, bounds=zip(lb, ub),
                  options=dict(bland=True))
 
         if res.message == 'Optimization failed. Unable to ' \
@@ -209,17 +223,20 @@ class FastKernelClassifier(object):
         self.pen_opt = weight_opt[(1+self.num_train_samples):-1]
         self.eps_opt = weight_opt[-1]
         self.fun_opt = res.fun
+        if np.abs(self.eps_opt - self.fun_opt) >= 0.00001:
+            warnings.warn('\neps_opt is not identical to fun_opt. Check formulation. ')
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
 
+
     def fit_grb(self, trainx, trainy):
         """
-        Same as the fit method, however, using Gurobi.
+        Same as the 'fit' method, however, using Gurobi.
         Compute the optimal weight vector to classify (trainx, trainy) using Gurobi.
 
         The variable aasigment for l = 4 samples is given by
 
-        x = (a1, a2, a3, a4, b, xi1, xi2, xi3, xi4, eps)
+        x = (alpha_1, alpha_2, alpha_3, alpha_4, b, xi_1, xi_2, xi_3, xi_4, eps)
 
         leading to 2*l + 2 = 10 variables.
 
@@ -236,39 +253,39 @@ class FastKernelClassifier(object):
         self : object
 
         """
-        print "\nRunning Gurobi...\n"
+        print "\nFitting parameters using Gurobi...\n"
         [self.num_train_samples, self.num_features] = trainx.shape
 
         # Need trainx and testx in 'predict', need trainy in 'plot2d'
         self.trainx = trainx
         self.trainy = trainy
 
-        # Constraints from data (halfspaces)
-        kmat = get_label_adjusted_train_kernel(trainx, trainy,
+        # Constraints from data (halfspaces), this is the transpose of K
+        Ktraintrans = get_label_adjusted_train_kernel(trainx, trainy,
                                                kernel=self.kernel,
                                                degree=self.degree,
                                                gamma=self.gamma,
                                                coef0=self.coef0)
 
-        # self.kmat = kmat
+        # self.Ktraintrans = Ktraintrans
         # print "self.trainx = \n", self.trainx
-        # print "kmat = \n", kmat
+        # print "Ktraintrans = \n", Ktraintrans
 
         # Objective function
         c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
                        self.Csoft*np.ones((self.num_train_samples, 1)), 1)).flatten()        # soft 5/7
 
-        aub_data = np.hstack((-kmat, -np.eye(self.num_train_samples),           # soft 1/7
+        A_ub = np.hstack((-Ktraintrans, -np.eye(self.num_train_samples),           # soft 1/7
                               -np.ones((self.num_train_samples, 1))))
-        bub_data = np.zeros(self.num_train_samples)
+        b_ub = np.zeros(self.num_train_samples)
         lb = np.hstack((-np.ones(self.num_train_samples + 1),
                         np.zeros(self.num_train_samples), -1e9))
         ub = np.hstack((np.ones(self.num_train_samples + 1),
                         1e9*np.ones(self.num_train_samples + 1)))
 
         # Speed improvement in Gurobi due to as dictionary inconclusive
-        aub_data_dict = {i: {j: v for j, v in enumerate(row)}
-                         for i, row in enumerate(aub_data)}
+        Aub_dict = {i: {j: v for j, v in enumerate(row)}
+                         for i, row in enumerate(A_ub)}
 
         # Using Gurobi
         m = grb.Model()
@@ -293,10 +310,10 @@ class FastKernelClassifier(object):
 
         constr_list = range(self.num_train_samples)
         for i in constr_list:
-            m.addConstr(grb.quicksum(x[j] * aub_data_dict[i][j]
-                                     for j in var_list) <= bub_data[i])
-            # m.addConstr(grb.quicksum(x[j] * aub_data[i, j]
-            #                          for j in var_list) <= bub_data[i])
+            m.addConstr(grb.quicksum(x[j] * Aub_dict[i][j]
+                                     for j in var_list) <= b_ub[i])
+            # m.addConstr(grb.quicksum(x[j] * A_ub[i, j]
+            #                          for j in var_list) <= b_ub[i])
         m.optimize()
 
         # pr = cProfile.Profile()
@@ -305,6 +322,9 @@ class FastKernelClassifier(object):
         # pr.disable()
         # pr.print_stats(sort='time')
 
+        if m.Status != 2:
+            warnings.warn('\nGurobi did not return an optimal solution. ')
+
         self.m = m
 
         weight_opt = [x[j].x for j in var_list]
@@ -312,14 +332,15 @@ class FastKernelClassifier(object):
         self.pen_opt = weight_opt[(1+self.num_train_samples):-1]
         self.eps_opt = weight_opt[-1]
         self.fun_opt = m.objval
+        if np.abs(self.eps_opt - self.fun_opt) >= 0.00001:
+            warnings.warn('\neps_opt is not identical to fun_opt. Check formulation. ')
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
-        if m.Status != 2:
-            warnings.warn('\nGurobi did not return an optimal solution. ')
 
     def predict(self, testx):
         """
-        Predict functional values of testx using weight_opt computed in 'fit'.
+        Predict functional values of testx using weight_opt computed in 'fit'
+        and 'fit_grb'.
 
         Parameters
         ----------
@@ -332,17 +353,14 @@ class FastKernelClassifier(object):
         """
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
-        ktest = get_label_adjusted_test_kernel(self.trainx, testx,
+        Ktesttrans = get_label_adjusted_test_kernel(self.trainx, testx,
                                                kernel=self.kernel,
                                                degree=self.degree,
                                                gamma=self.gamma,
                                                coef0=self.coef0)
-        # self.ktest = ktest
-        # print "self.trainx = \n", self.trainx
-        # print "testx = \n", testx
-        # print "ktest = \n", ktest
+
         # want printed output on console
-        return np.sign(np.dot(ktest, self.weight_opt))
+        return np.sign(np.dot(Ktesttrans, self.weight_opt))
 
     def plot2d(self, meshstep=0.02):
         """
@@ -359,20 +377,20 @@ class FastKernelClassifier(object):
         self : object
         """
         if self.trainx.shape[1] == 2:
-            xmin = self.trainx[:, 0].min() - 3
-            xmax = self.trainx[:, 0].max() + 3
-            ymin = self.trainx[:, 1].min() - 3
-            ymax = self.trainx[:, 1].max() + 3
-            xx, yy = np.meshgrid(np.arange(xmin, xmax + meshstep, meshstep),
-                                 np.arange(ymin, ymax + meshstep, meshstep))
+            x1min = self.trainx[:, 0].min() - 3
+            x1max = self.trainx[:, 0].max() + 3
+            x2min = self.trainx[:, 1].min() - 3
+            x2max = self.trainx[:, 1].max() + 3
+            xx1, xx2 = np.meshgrid(np.arange(x1min, x1max + meshstep, meshstep),
+                                 np.arange(x2min, x2max + meshstep, meshstep))
 
             fig, ax = plt.subplots(1, 1)
-            testx = np.c_[xx.ravel(), yy.ravel()]
+            testx = np.c_[xx1.ravel(), xx2.ravel()]
             Z = self.predict(testx)
 
-            Z = Z.reshape(xx.shape)
+            Z = Z.reshape(xx1.shape)
             # colormap is coolwarm
-            out = ax.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.8)
+            out = ax.contourf(xx1, xx2, Z, cmap=plt.cm.coolwarm, alpha=0.8)
             ax.scatter(self.trainx[:, 0], self.trainx[:, 1], c=self.trainy,
                        cmap=plt.cm.coolwarm, s=60, edgecolors='k')
             ax.set_xlabel('trainx[:, 0] - Attribute 1')
@@ -389,18 +407,19 @@ class FastKernelClassifier(object):
 
 def get_label_adjusted_train_kernel(trainx, trainy, **params):
     """
-    Compute the training kernel matrix. This matrix also takes labels into consideration.
-    The training kernel matrix has l+1 rows and l columns, where l is the number of
-    samples in trainx and trainy.
+    Compute the training kernel matrix (THE TRANSPOSE ACTUALLY).
+
+    This matrix also takes labels into consideration.  The training kernel matrix has l+1 rows and l columns,
+    where l is the number of samples in trainx and trainy.
     All columns are multiplied by the corresponding yj.  This implies that the l+1 row
-    contains yj's.  Corresponds to K.T from Trafalis, Malyscheff, ACM, 2002.
+    contains yj's only.  Corresponds to K.T from Trafalis, Malyscheff, ACM, 2002.
 
     Parameters
     ----------
     :param trainx: input samples for training set (d by l)
     :param trainy: labels for training set (d by 1) (flattened)
 
-    params = {  kernel,
+            params = {  kernel,
                         degree,
                         gamma,
                         coef0}
@@ -408,7 +427,7 @@ def get_label_adjusted_train_kernel(trainx, trainy, **params):
 
     Usage:
     ------
-    Ktrain = get_label_adjusted_train_kernel(trainx, trainy, kernel='poly', degree=3, gamma=1, coef0=1)
+    Ktraintrans = get_label_adjusted_train_kernel(trainx, trainy, kernel='poly', degree=3, gamma=1, coef0=1)
     """
     # TODO: more elegant: what are the **kwds in pairwise_kernels()?
     if params['kernel'] == 'linear':
@@ -447,7 +466,7 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
 
     Usage:
     ------
-    Ktest = get_label_adjusted_test_kernel(trainx, testx)
+    Ktesttrans = get_label_adjusted_test_kernel(trainx, testx)
     """
     num_test_samples = testx.shape[0]
 
@@ -520,6 +539,7 @@ if __name__ == '__main__':
 
     # Include a small dataset to run module: OR problem
     print "Testing OR:"
+    # Swapping last two training samples affects 'fit':  eps_opt<>fun_opt
     trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
     trY = [1, -1, 1, -1]
     tsX = np.array([[1, 2], [-3, 2], [6, -1]])
@@ -554,4 +574,4 @@ if __name__ == '__main__':
     print "trY = \n", trY
     if not (abs(ftest - trY) <= 0.001).all():
         print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-    fkc.plot2d(0.02)
+    fkc.plot2d()

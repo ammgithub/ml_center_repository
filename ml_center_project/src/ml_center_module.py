@@ -58,6 +58,9 @@ class FastKernelClassifier(object):
     For polynomial (and sigmoid) kernels only.
     For polynomial kernels coef0 is a bias added to u*v
 
+    Csoft : float, (default=10000.0)
+    Penalty parameter for soft margin
+
     Examples
     --------
     >>> fkc = FastKernelClassifier(kernel='poly', degree=3, gamma=1, coef0=1, Csoft=10000)
@@ -82,20 +85,21 @@ class FastKernelClassifier(object):
     """
     def __init__(self, kernel='linear', degree=3, gamma=1, coef0=0.0, Csoft=10000.0):
         """
-        :param kernel:
-        :type kernel:
+        :param kernel:  Type of kernel, 'poly', 'rbf', default is 'linear'
+        :type kernel:   string
 
-        :param degree:
-        :type degree:
+        :param degree:  Degree of the polynomial kernel. Ignored by other kernels
+        :type degree:   int
 
-        :param gamma:
-        :type gamma:
+        :param gamma:   Radial-basis function kernels. gamma = 1 / 2 sigma^2.
+                        polynomial kernels: gamma is a multiplier of u*v
+        :type gamma:    int
 
-        :param coef0:
-        :type coef0:
+        :param coef0:   Bias for polynomial kernels only, default = 0.0
+        :type coef0:    float
 
-        :param Csoft:
-        :type Csoft:
+        :param Csoft:   Penalty parameter for soft margin, default = 10000.0
+        :type Csoft:    float
         """
         self.kernel = kernel
         self.degree = degree
@@ -140,7 +144,7 @@ class FastKernelClassifier(object):
         print "\nFitting parameters using Scipy linprog...\n"
         [self.num_train_samples, self.num_features] = trainx.shape
 
-        # Need trainx and testx in 'predict', need trainy in 'plot2d'
+        # trainx and testx in 'predict', trainy for kernel, and testy for 'plot2d'
         self.trainx = trainx
         self.trainy = trainy
 
@@ -167,11 +171,11 @@ class FastKernelClassifier(object):
         ub = np.hstack((np.ones(self.num_train_samples + 1),
                         1e9*np.ones(self.num_train_samples + 1)))
 
-        print "c = \n", c
-        print "A_ub = \n", A_ub
-        print "b_ub = \n", b_ub
-        print "lb = \n", lb
-        print "ub = \n", ub
+        # print "c = \n", c
+        # print "A_ub = \n", A_ub
+        # print "b_ub = \n", b_ub
+        # print "lb = \n", lb
+        # print "ub = \n", ub
 
         ######################################################################
         #  The set of constraints below implement
@@ -246,7 +250,7 @@ class FastKernelClassifier(object):
                  Input training samples
 
         trainy : list of numpy array of floats or integers num_train_samples-by-one
-                 Input training labels
+                 Training labels
 
         Returns
         -------
@@ -256,7 +260,7 @@ class FastKernelClassifier(object):
         print "\nFitting parameters using Gurobi...\n"
         [self.num_train_samples, self.num_features] = trainx.shape
 
-        # Need trainx and testx in 'predict', need trainy in 'plot2d'
+        # trainx and testx in 'predict', trainy for kernel, and testy for 'plot2d'
         self.trainx = trainx
         self.trainy = trainy
 
@@ -342,14 +346,22 @@ class FastKernelClassifier(object):
         Predict functional values of testx using weight_opt computed in 'fit'
         and 'fit_grb'.
 
+
         Parameters
         ----------
-        testx :  numpy array of floats, num_train_samples-by-num_features
+        testx :  numpy array of floats, l-by-num_features
                  Input test samples
 
         Returns
         -------
         self : object
+
+        Notes
+        -----
+        Since 'predict' computes labels for some 'testx', which can be a single
+        point, a meshgrid, or anything in-between, we can not define the formal
+        test set 'self.testx' here.
+
         """
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
@@ -359,8 +371,37 @@ class FastKernelClassifier(object):
                                                gamma=self.gamma,
                                                coef0=self.coef0)
 
-        # want printed output on console
         return np.sign(np.dot(Ktesttrans, self.weight_opt))
+
+    def score(self, testx, testy):
+        """
+        Computes the generalization error for a clearly defined test set
+        consisting of inputs 'testx' and labels 'testy'.
+
+        :param testx:   inputs for test set (n_test by l)
+        :type testx:    array-like
+
+        :param testy:   labels for test set (n_test by n_features)
+        :type testy:    array-like
+
+        """
+        self.testx = testx
+        self.testy = testy
+
+        # multiplication by 1 converts True/False to 1/0
+        return sum((testy == self.predict(testx)) * 1) / float(len(testy))
+
+    def score_train(self):
+        """
+        Verifies the quality of the training date separation.
+
+        """
+        if not (abs(self.predict(self.trainx) - self.trainy) <= 0.001).all():
+            print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+
+        # multiplication by 1 converts True/False to 1/0
+        return sum((self.trainy == self.predict(self.trainx)) * 1) /\
+            float(len(self.trainy))
 
     def plot2d(self, meshstep=0.02):
         """
@@ -372,27 +413,33 @@ class FastKernelClassifier(object):
         meshstep : float, (default=0.02)
                    Precision in meshgrid, smaller values result in smoother functions.
 
+        testy : list of numpy array of floats or integers l-by-1
+                Test labels
+
         Returns
         -------
         self : object
         """
         if self.trainx.shape[1] == 2:
-            x1min = self.trainx[:, 0].min() - 3
-            x1max = self.trainx[:, 0].max() + 3
-            x2min = self.trainx[:, 1].min() - 3
-            x2max = self.trainx[:, 1].max() + 3
+            x1min = self.trainx[:, 0].min() - 6
+            x1max = self.trainx[:, 0].max() + 6
+            x2min = self.trainx[:, 1].min() - 6
+            x2max = self.trainx[:, 1].max() + 6
             xx1, xx2 = np.meshgrid(np.arange(x1min, x1max + meshstep, meshstep),
                                  np.arange(x2min, x2max + meshstep, meshstep))
 
             fig, ax = plt.subplots(1, 1)
-            testx = np.c_[xx1.ravel(), xx2.ravel()]
-            Z = self.predict(testx)
+            xx = np.c_[xx1.ravel(), xx2.ravel()]
+            # This line overwrites self.testx
+            Z = self.predict(xx)
 
             Z = Z.reshape(xx1.shape)
             # colormap is coolwarm
             out = ax.contourf(xx1, xx2, Z, cmap=plt.cm.coolwarm, alpha=0.8)
             ax.scatter(self.trainx[:, 0], self.trainx[:, 1], c=self.trainy,
-                       cmap=plt.cm.coolwarm, s=60, edgecolors='k')
+                       cmap=plt.cm.coolwarm, s=60, marker='o', edgecolors='k')
+            ax.scatter(self.testx[:, 0], self.testx[:, 1], c=self.testy,
+                       cmap=plt.cm.coolwarm, s=30, marker='D', edgecolors='k')
             ax.set_xlabel('trainx[:, 0] - Attribute 1')
             ax.set_ylabel('trainx[:, 1] - Attribute 2')
             title_string = "FKC - Training data and decision surface for: \nKernel = %s, " \
@@ -447,7 +494,6 @@ def get_label_adjusted_train_kernel(trainx, trainy, **params):
     Ktrain = np.vstack((Ktrain, trainy))
     return Ktrain.T
 
-
 def get_label_adjusted_test_kernel(trainx, testx, **params):
     """
     Compute the test kernel matrix.  The test kernel matrix has l+1 rows and l columns,
@@ -487,6 +533,7 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
     # add row of ones
     Ktest = np.vstack((ktest, np.ones((1, num_test_samples))))
     return Ktest.T
+
 
 if __name__ == '__main__':
     """
@@ -535,7 +582,7 @@ if __name__ == '__main__':
     # print "trY = \n", trY
     # if not (abs(ftest - trY) <= 0.001).all():
     #     print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-    # fkc.plot2d(0.02)
+    # fkc.plot2d()
 
     # Include a small dataset to run module: OR problem
     print "Testing OR:"
@@ -556,22 +603,20 @@ if __name__ == '__main__':
     print "-" * 70
     fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                coef0=coef0, Csoft=Csoft)
+
     # fkc.fit_grb(trX, trY)
     fkc.fit(trX, trY)
+
     print "fkc.eps_opt = ", fkc.eps_opt
     print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
     print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
     print "fkc.fun_opt = ", fkc.fun_opt
-    ftest = fkc.predict(tsX)
+
     print "tsX = \n", tsX
-    print "fkc.predict(tsX) = \n", ftest
     print "tsY = \n", tsY
-    if not (abs(ftest - tsY) <= 0.001).all():
-        print "*** Test set not classified correctly. ***"
-    ftest = fkc.predict(trX)
-    print "trX = \n", trX
-    print "fkc.predict(trX) = \n", ftest
-    print "trY = \n", trY
-    if not (abs(ftest - trY) <= 0.001).all():
-        print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
+    print "ftest = \n", fkc.predict(tsX)
+    print "ts_error = ", fkc.score(tsX, tsY)
+
+    print "tr_error = ", fkc.score_train()
+
     fkc.plot2d()

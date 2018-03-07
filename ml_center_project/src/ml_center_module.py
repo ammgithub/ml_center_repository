@@ -155,10 +155,6 @@ class FastKernelClassifier(object):
                                                       gamma=self.gamma,
                                                       coef0=self.coef0)
 
-        # self.Ktraintrans = Ktraintrans
-        # print "self.trainx = \n", self.trainx
-        # print "Ktraintrans = \n", Ktraintrans
-
         # Objective function
         c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
                        self.Csoft*np.ones((self.num_train_samples, 1)), 1)).flatten()        # soft 5/7
@@ -170,47 +166,6 @@ class FastKernelClassifier(object):
                         np.zeros(self.num_train_samples), -1e9))
         ub = np.hstack((np.ones(self.num_train_samples + 1),
                         1e9*np.ones(self.num_train_samples + 1)))
-
-        # print "c = \n", c
-        # print "a_ub = \n", a_ub
-        # print "b_ub = \n", b_ub
-        # print "lb = \n", lb
-        # print "ub = \n", ub
-
-        ######################################################################
-        #  The set of constraints below implement
-        #
-        #  -eps <= alpha <= eps
-        #
-        #  and not
-        #
-        #   -1  <= alpha <=  1
-        #
-        #  and will be removed in the next commit.
-        ######################################################################
-        # # Box constraints lower
-        # aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
-        #                            np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
-        #                            -np.ones((self.num_train_samples+1, 1))))
-        # bub_box_lower = np.ones((self.num_train_samples+1, 1))
-        #
-        # # Box constraints upper
-        # aub_box_upper = np.hstack((np.identity(self.num_train_samples+1),
-        #                            np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 3/7
-        #                            -np.ones((self.num_train_samples+1, 1))))
-        # bub_box_upper = np.ones((self.num_train_samples+1, 1))
-        #
-        # # Box xi                                                                soft 4/7
-        # aub_box_xi = np.hstack((np.zeros((self.num_train_samples, self.num_train_samples + 1)),
-        #                         -np.identity(self.num_train_samples),
-        #                         np.zeros((self.num_train_samples, 1))))
-        # bub_box_xi = np.zeros((self.num_train_samples, 1))
-        #
-        # # Putting it all together
-        # a_ub_all = np.vstack((a_ub, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
-        # b_ub_all = np.vstack((b_ub, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
-        #
-        # result = lp(c=c, A_ub=a_ub_all, b_ub=b_ub_all, bounds=(None, None))
 
         # Scipy lp solver: use bland option?)
         result = lp(c=c, A_ub=a_ub, b_ub=b_ub, bounds=zip(lb, ub),

@@ -421,10 +421,10 @@ class FastKernelClassifier(object):
         self : object
         """
         if self.trainx.shape[1] == 2:
-            x1min = self.trainx[:, 0].min() - 6
-            x1max = self.trainx[:, 0].max() + 6
-            x2min = self.trainx[:, 1].min() - 6
-            x2max = self.trainx[:, 1].max() + 6
+            x1min = min(self.trainx[:, 0].min() - 3, self.testx[:, 0].min() - 3)
+            x1max = max(self.trainx[:, 0].max() + 3, self.testx[:, 0].max() + 3)
+            x2min = min(self.trainx[:, 1].min() - 3, self.testx[:, 1].min() - 3)
+            x2max = max(self.trainx[:, 1].max() + 3, self.testx[:, 1].max() + 3)
             xx1, xx2 = np.meshgrid(np.arange(x1min, x1max + meshstep, meshstep),
                                  np.arange(x2min, x2max + meshstep, meshstep))
 
@@ -437,11 +437,22 @@ class FastKernelClassifier(object):
             # colormap is coolwarm
             out = ax.contourf(xx1, xx2, Z, cmap=plt.cm.coolwarm, alpha=0.8)
             ax.scatter(self.trainx[:, 0], self.trainx[:, 1], c=self.trainy,
-                       cmap=plt.cm.coolwarm, s=60, marker='o', edgecolors='k')
-            ax.scatter(self.testx[:, 0], self.testx[:, 1], c=self.testy,
-                       cmap=plt.cm.coolwarm, s=30, marker='D', edgecolors='k')
-            ax.set_xlabel('trainx[:, 0] - Attribute 1')
-            ax.set_ylabel('trainx[:, 1] - Attribute 2')
+                       cmap=plt.cm.coolwarm, s=80, marker='x', edgecolors='face')
+
+            # Split the test set into correctly and incorrectly classified
+            idx_good = (fkc.testy == fkc.predict(fkc.testx)) * 1
+            idx_bad = ~(fkc.testy == fkc.predict(fkc.testx)) * 1
+            ax.scatter(self.testx[np.nonzero(idx_good), 0],
+                       self.testx[np.nonzero(idx_good), 1],
+                       c=np.array(self.testy)[np.nonzero(idx_good)[0]],
+                       cmap=plt.cm.coolwarm, s=80, marker='.', edgecolors='face')
+            ax.scatter(self.testx[np.nonzero(idx_bad), 0],
+                       self.testx[np.nonzero(idx_bad), 1],
+                       c=np.array(self.testy)[np.nonzero(idx_bad)[0]],
+                       cmap=plt.cm.coolwarm, s=120, marker='$\odot$', edgecolors='face')
+
+            ax.set_xlabel('trainx[:, 0] and test[:, 0] - Attribute 1')
+            ax.set_ylabel('trainx[:, 1] and test[:, 1] - Attribute 2')
             title_string = "FKC - Training data and decision surface for: \nKernel = %s, " \
                            "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, Csoft =  %4.4f" % (
                             self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
@@ -494,6 +505,7 @@ def get_label_adjusted_train_kernel(trainx, trainy, **params):
     Ktrain = np.vstack((Ktrain, trainy))
     return Ktrain.T
 
+
 def get_label_adjusted_test_kernel(trainx, testx, **params):
     """
     Compute the test kernel matrix.  The test kernel matrix has l+1 rows and l columns,
@@ -533,7 +545,6 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
     # add row of ones
     Ktest = np.vstack((ktest, np.ones((1, num_test_samples))))
     return Ktest.T
-
 
 if __name__ == '__main__':
     """
@@ -616,7 +627,6 @@ if __name__ == '__main__':
     print "tsY = \n", tsY
     print "ftest = \n", fkc.predict(tsX)
     print "ts_error = ", fkc.score(tsX, tsY)
-
     print "tr_error = ", fkc.score_train()
 
     fkc.plot2d()

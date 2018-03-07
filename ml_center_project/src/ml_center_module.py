@@ -119,10 +119,11 @@ class FastKernelClassifier(object):
 
     def fit(self, trainx, trainy):
         """
+        Soft margin case:
         Compute the optimal weight vector to classify (trainx, trainy) using the
         Scipy function 'linprog'.
 
-        The variable aasigment for l = 4 samples is given by
+        The variable assignment for l = 4 samples is given by
 
         x = (alpha_1, alpha_2, alpha_3, alpha_4, b, xi_1, xi_2, xi_3, xi_4, eps)
 
@@ -141,7 +142,7 @@ class FastKernelClassifier(object):
         self : object
 
         """
-        print "\nFitting parameters using Scipy linprog...\n"
+        print "Fitting soft margin using Scipy linprog...\n"
         [self.num_train_samples, self.num_features] = trainx.shape
 
         # trainx and testx in 'predict', trainy for kernel, and testy for 'plot2d'
@@ -161,7 +162,8 @@ class FastKernelClassifier(object):
 
         a_ub = np.hstack((-Ktraintrans, -np.eye(self.num_train_samples),           # soft 1/7
                           -np.ones((self.num_train_samples, 1))))
-        b_ub = np.zeros((self.num_train_samples, 1))  # linprog needs column vector NO!
+        # b_ub = np.zeros((self.num_train_samples, 1))
+        b_ub = np.zeros(self.num_train_samples)
         lb = np.hstack((-np.ones(self.num_train_samples + 1),
                         np.zeros(self.num_train_samples), -1e9))
         ub = np.hstack((np.ones(self.num_train_samples + 1),
@@ -189,12 +191,82 @@ class FastKernelClassifier(object):
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
 
+    def fit_hard(self, trainx, trainy):
+        """
+        Hard margin case (mainly for testing):
+        Compute the optimal weight vector to classify (trainx, trainy) using the
+        Scipy function 'linprog'.
+
+        The variable assignment for l = 4 samples is given by
+
+        x = (alpha_1, alpha_2, alpha_3, alpha_4, b, eps)
+
+        leading to l + 2 = 6 variables.
+
+        Parameters
+        ----------
+        trainx : numpy array of floats, num_train_samples-by-num_features
+                 Input training samples
+
+        trainy : list of numpy array of floats or integers num_train_samples-by-one
+                 Input training labels
+
+        Returns
+        -------
+        self : object
+
+        """
+        print "Fitting hard margin using Scipy linprog...\n"
+        [self.num_train_samples, self.num_features] = trainx.shape
+
+        # trainx and testx in 'predict', trainy for kernel, and testy for 'plot2d'
+        self.trainx = trainx
+        self.trainy = trainy
+
+        # Constraints from data (halfspaces), this is the transpose of K
+        Ktraintrans = get_label_adjusted_train_kernel(trainx, trainy,
+                                                      kernel=self.kernel,
+                                                      degree=self.degree,
+                                                      gamma=self.gamma,
+                                                      coef0=self.coef0)
+
+        # Objective function
+        c = np.vstack((np.zeros((self.num_train_samples+1, 1)), 1)).flatten()
+
+        a_ub = np.hstack((-Ktraintrans, -np.ones((self.num_train_samples, 1))))
+        # b_ub = np.zeros((self.num_train_samples, 1))
+        b_ub = np.zeros(self.num_train_samples)
+        lb = np.hstack((-np.ones(self.num_train_samples + 1), -1e9))
+        ub = np.hstack((np.ones(self.num_train_samples + 1), 1e9))
+
+        # Scipy lp solver: use bland option?)
+        result = lp(c=c, A_ub=a_ub, b_ub=b_ub, bounds=zip(lb, ub),
+                 options=dict(bland=True))
+
+        if result.message == 'Optimization failed. Unable to ' \
+                             'find a feasible starting point.':
+            print result
+        if result.status > 0:
+            print 'Scipy linprog did not terminate successfully. status = %d' \
+                  % result.status
+
+        weight_opt = result.x
+        self.weight_opt = weight_opt[:-1]
+        self.eps_opt = weight_opt[-1]
+        self.fun_opt = result.fun
+        if np.abs(self.eps_opt - self.fun_opt) >= 0.00001:
+            warnings.warn('\neps_opt is not identical to fun_opt. eps_opt - fun_opt = %0.6f. ' \
+                          % (self.eps_opt - self.fun_opt))
+        if np.abs(self.eps_opt) <= 0.00001:
+            warnings.warn('\neps_opt is close to zero. Data not separable. ')
+
     def fit_grb(self, trainx, trainy):
         """
+        Soft margin case:
         Same as the 'fit' method, however, using Gurobi.
         Compute the optimal weight vector to classify (trainx, trainy) using Gurobi.
 
-        The variable aasigment for l = 4 samples is given by
+        The variable assignment for l = 4 samples is given by
 
         x = (alpha_1, alpha_2, alpha_3, alpha_4, b, xi_1, xi_2, xi_3, xi_4, eps)
 
@@ -213,7 +285,7 @@ class FastKernelClassifier(object):
         self : object
 
         """
-        print "\nFitting parameters using Gurobi...\n"
+        print "Fitting soft margin using Gurobi...\n"
         [self.num_train_samples, self.num_features] = trainx.shape
 
         # trainx and testx in 'predict', trainy for kernel, and testy for 'plot2d'
@@ -226,10 +298,6 @@ class FastKernelClassifier(object):
                                                       degree=self.degree,
                                                       gamma=self.gamma,
                                                       coef0=self.coef0)
-
-        # self.Ktraintrans = Ktraintrans
-        # print "self.trainx = \n", self.trainx
-        # print "Ktraintrans = \n", Ktraintrans
 
         # Objective function
         c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
@@ -298,6 +366,101 @@ class FastKernelClassifier(object):
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
 
+    def fit_grb_hard(self, trainx, trainy):
+        """
+        Hard margin case:
+        Same as the 'fit_hard' method, however, using Gurobi.
+        Compute the optimal weight vector to classify (trainx, trainy) using Gurobi.
+
+        The variable assignment for l = 4 samples is given by
+
+        x = (alpha_1, alpha_2, alpha_3, alpha_4, b, eps)
+
+        leading to l + 2 = 6 variables.
+
+        Parameters
+        ----------
+        trainx : numpy array of floats, num_train_samples-by-num_features
+                 Input training samples
+
+        trainy : list of numpy array of floats or integers num_train_samples-by-one
+                 Training labels
+
+        Returns
+        -------
+        self : object
+
+        """
+        print "Fitting hard margin using Gurobi...\n"
+        [self.num_train_samples, self.num_features] = trainx.shape
+
+        # trainx and testx in 'predict', trainy for kernel, and testy for 'plot2d'
+        self.trainx = trainx
+        self.trainy = trainy
+
+        # Constraints from data (halfspaces), this is the transpose of K
+        Ktraintrans = get_label_adjusted_train_kernel(trainx, trainy,
+                                                      kernel=self.kernel,
+                                                      degree=self.degree,
+                                                      gamma=self.gamma,
+                                                      coef0=self.coef0)
+
+        # Objective function
+        c = np.vstack((np.zeros((self.num_train_samples+1, 1)), 1)).flatten()
+
+        a_ub = np.hstack((-Ktraintrans, -np.ones((self.num_train_samples, 1))))
+        b_ub = np.zeros(self.num_train_samples)
+        lb = np.hstack((-np.ones(self.num_train_samples + 1), -1e9))
+        ub = np.hstack((np.ones(self.num_train_samples + 1), 1e9))
+
+        # Speed improvement in Gurobi due to as dictionary inconclusive
+        a_ub_dict = {i: {j: v for j, v in enumerate(row)}
+                     for i, row in enumerate(a_ub)}
+
+        # Using Gurobi
+        m = grb.Model()
+
+        # Switch off console output
+        m.setParam('OutputFlag', 0)
+        m.setParam('Method', 1)  # dual simplex
+        # m.setParam('TimeLimit', 1)
+        # m.setParam('Aggregate', 0)
+
+        # m.set(grb.GRB_IntParam_OutputFlag, 0)
+        var_list = range(self.num_train_samples + 2)
+
+        # Using a list
+        # xold = [m.addVar(lb=lb[j], ub=ub[j], obj=c[j],
+        #                  vtype=grb.GRB.CONTINUOUS) for j in var_list]
+
+        # Using a dictionary, but speed-up inconclusive
+        x = {j: m.addVar(lb=lb[j], ub=ub[j], obj=c[j], vtype=grb.GRB.CONTINUOUS)
+             for j in var_list}
+        m.update()
+
+        constr_list = range(self.num_train_samples)
+        for i in constr_list:
+            m.addConstr(grb.quicksum(x[j] * a_ub_dict[i][j]
+                                     for j in var_list) <= b_ub[i])
+            # m.addConstr(grb.quicksum(x[j] * a_ub[i, j]
+            #                          for j in var_list) <= b_ub[i])
+        m.optimize()
+
+        if m.Status != 2:
+            warnings.warn('\nGurobi did not return an optimal solution. ')
+
+        self.m = m
+
+        weight_opt = [x[j].x for j in var_list]
+        self.weight_opt = weight_opt[:-1]
+        self.eps_opt = weight_opt[-1]
+        self.fun_opt = m.objval
+        if np.abs(self.eps_opt - self.fun_opt) >= 0.00001:
+            warnings.warn('\neps_opt is not identical to fun_opt. eps_opt - fun_opt = %0.6f. ' \
+                          % (self.eps_opt - self.fun_opt))
+        if np.abs(self.eps_opt) <= 0.00001:
+            warnings.warn('\neps_opt is close to zero. Data not separable. ')
+
     def predict(self, testx):
         """
         Predict functional values of testx using weight_opt computed in 'fit'
@@ -320,6 +483,7 @@ class FastKernelClassifier(object):
         test set 'self.testx' here.
 
         """
+        self.num_test_samples = testx.shape[0]
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
         Ktesttrans = get_label_adjusted_test_kernel(self.trainx, testx,
@@ -360,18 +524,18 @@ class FastKernelClassifier(object):
         return sum((self.trainy == self.predict(self.trainx)) * 1) /\
             float(len(self.trainy))
 
-    def plot2d(self, meshstep=0.02):
+    def plot2d(self, title_info=' ', meshstep=0.02):
         """
         Plot simple examples that have 2-dimensional input training samples
         (2 features)
 
         Parameters
         ----------
-        meshstep : float, (default=0.02)
-                   Precision in meshgrid, smaller values result in smoother functions.
+        meshstep    :   float, (default=0.02)
+                        Precision in meshgrid, smaller values result in smoother functions.
 
-        testy : list of numpy array of floats or integers l-by-1
-                Test labels
+        title_info :    Additional information that can be passed on to figure
+                        string
 
         Returns
         -------
@@ -410,8 +574,8 @@ class FastKernelClassifier(object):
 
             ax.set_xlabel('trainx[:, 0] and testx[:, 0]    |    Attribute 1')
             ax.set_ylabel('trainx[:, 1] and testx[:, 1]    |    Attribute 2')
-            title_string = "FKC - Training data and decision surface for: \nKernel = %s, " \
-                           "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, Csoft =  %4.4f" % (
+            title_string = title_info + " FKC - Training and test data and decision surface for: " \
+                "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, Csoft =  %4.4f" % (
                             self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
             ax.set_title(title_string)
             plt.grid()
@@ -503,6 +667,22 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
     Ktest = np.vstack((ktest, np.ones((1, num_test_samples))))
     return Ktest.T
 
+
+def print_output(fkc, tsX, tsY, title_info):
+    """
+    Simple output routine to display results and figure:
+
+    """
+    print "fkc.eps_opt = ", fkc.eps_opt
+    print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+    print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+    print "tr_error = ", fkc.score_train()
+    print "tsX = \n", tsX
+    print "tsY = \n", tsY
+    print "ftest = \n", fkc.predict(tsX)
+    print "ts_error = ", fkc.score(tsX, tsY)
+    fkc.plot2d(title_info=title_info)
+
 if __name__ == '__main__':
     """
     execfile('ml_center_module.py')
@@ -549,17 +729,31 @@ if __name__ == '__main__':
         print "-" * 70
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                    coef0=coef0, Csoft=Csoft)
+
+        title_info = 'Scipy linprog soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
         fkc.fit_grb(trX, trY)
-        # fkc.fit(trX, trY)
-        print "fkc.eps_opt = ", fkc.eps_opt
-        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "tr_error = ", fkc.score_train()
-        print "tsX = \n", tsX
-        print "tsY = \n", tsY
-        print "ftest = \n", fkc.predict(tsX)
-        print "ts_error = ", fkc.score(tsX, tsY)
-        fkc.plot2d()
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Scipy linprog hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
     elif user_in == 2:
         print "(2) FKC: Testing extended 2-dimensional circular data \n"
         # works with scipy (Scipy bug 'Optimization failed. Unable to find a feasible starting point.')
@@ -581,17 +775,31 @@ if __name__ == '__main__':
         print "-" * 70
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                    coef0=coef0, Csoft=Csoft)
+
+        title_info = 'Scipy linprog soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
         fkc.fit_grb(trX, trY)
-        # fkc.fit(trX, trY)
-        print "fkc.eps_opt = ", fkc.eps_opt
-        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "tr_error = ", fkc.score_train()
-        print "tsX = \n", tsX
-        print "tsY = \n", tsY
-        print "ftest = \n", fkc.predict(tsX)
-        print "ts_error = ", fkc.score(tsX, tsY)
-        fkc.plot2d()
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Scipy linprog hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
     elif user_in == 3:
         print "(3) FKC: Testing another extended 2-dimensional circular data \n"
         trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [4, 5.5]])
@@ -610,16 +818,30 @@ if __name__ == '__main__':
         print "-" * 70
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                    coef0=coef0, Csoft=Csoft)
+
+        title_info = 'Scipy linprog soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
         fkc.fit_grb(trX, trY)
-        # fkc.fit(trX, trY)
-        print "fkc.eps_opt = ", fkc.eps_opt
-        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "tr_error = ", fkc.score_train()
-        print "tsX = \n", tsX
-        print "tsY = \n", tsY
-        print "ftest = \n", fkc.predict(tsX)
-        print "ts_error = ", fkc.score(tsX, tsY)
-        fkc.plot2d()
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Scipy linprog hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
     else:
         print "Invalid selection. Program terminating. "

@@ -150,10 +150,10 @@ class FastKernelClassifier(object):
 
         # Constraints from data (halfspaces), this is the transpose of K
         Ktraintrans = get_label_adjusted_train_kernel(trainx, trainy,
-                                               kernel=self.kernel,
-                                               degree=self.degree,
-                                               gamma=self.gamma,
-                                               coef0=self.coef0)
+                                                      kernel=self.kernel,
+                                                      degree=self.degree,
+                                                      gamma=self.gamma,
+                                                      coef0=self.coef0)
 
         # self.Ktraintrans = Ktraintrans
         # print "self.trainx = \n", self.trainx
@@ -163,8 +163,8 @@ class FastKernelClassifier(object):
         c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
                        self.Csoft*np.ones((self.num_train_samples, 1)), 1)).flatten()        # soft 5/7
 
-        A_ub = np.hstack((-Ktraintrans, -np.eye(self.num_train_samples),           # soft 1/7
-                              -np.ones((self.num_train_samples, 1))))
+        a_ub = np.hstack((-Ktraintrans, -np.eye(self.num_train_samples),           # soft 1/7
+                          -np.ones((self.num_train_samples, 1))))
         b_ub = np.zeros((self.num_train_samples, 1))  # linprog needs column vector NO!
         lb = np.hstack((-np.ones(self.num_train_samples + 1),
                         np.zeros(self.num_train_samples), -1e9))
@@ -172,7 +172,7 @@ class FastKernelClassifier(object):
                         1e9*np.ones(self.num_train_samples + 1)))
 
         # print "c = \n", c
-        # print "A_ub = \n", A_ub
+        # print "a_ub = \n", a_ub
         # print "b_ub = \n", b_ub
         # print "lb = \n", lb
         # print "ub = \n", ub
@@ -188,8 +188,6 @@ class FastKernelClassifier(object):
         #
         #  and will be removed in the next commit.
         ######################################################################
-
-
         # # Box constraints lower
         # aub_box_lower = np.hstack((-np.identity(self.num_train_samples+1),
         #                            np.zeros((self.num_train_samples + 1, self.num_train_samples)),  # soft 2/7
@@ -209,29 +207,32 @@ class FastKernelClassifier(object):
         # bub_box_xi = np.zeros((self.num_train_samples, 1))
         #
         # # Putting it all together
-        # A_ub_all = np.vstack((A_ub, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
+        # a_ub_all = np.vstack((a_ub, aub_box_lower, aub_box_upper, aub_box_xi))       # soft 6/7
         # b_ub_all = np.vstack((b_ub, bub_box_lower, bub_box_upper, bub_box_xi)).flatten()
         #
-        # res = lp(c=c, A_ub=A_ub_all, b_ub=b_ub_all, bounds=(None, None))
+        # result = lp(c=c, A_ub=a_ub_all, b_ub=b_ub_all, bounds=(None, None))
 
         # Scipy lp solver: use bland option?)
-        res = lp(c=c, A_ub=A_ub, b_ub=b_ub, bounds=zip(lb, ub),
+        result = lp(c=c, A_ub=a_ub, b_ub=b_ub, bounds=zip(lb, ub),
                  options=dict(bland=True))
 
-        if res.message == 'Optimization failed. Unable to ' \
-                          'find a feasible starting point.':
-            print res
+        if result.message == 'Optimization failed. Unable to ' \
+                             'find a feasible starting point.':
+            print result
+        if result.status > 0:
+            print 'Scipy linprog did not terminate successfully. status = %d' \
+                  % result.status
 
-        weight_opt = res.x
+        weight_opt = result.x
         self.weight_opt = weight_opt[:-(1+self.num_train_samples)]                       # soft 7/7
         self.pen_opt = weight_opt[(1+self.num_train_samples):-1]
         self.eps_opt = weight_opt[-1]
-        self.fun_opt = res.fun
+        self.fun_opt = result.fun
         if np.abs(self.eps_opt - self.fun_opt) >= 0.00001:
-            warnings.warn('\neps_opt is not identical to fun_opt. Check formulation. ')
+            warnings.warn('\neps_opt is not identical to fun_opt. eps_opt - fun_opt = %0.6f. ' \
+                          % (self.eps_opt - self.fun_opt))
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
-
 
     def fit_grb(self, trainx, trainy):
         """
@@ -266,10 +267,10 @@ class FastKernelClassifier(object):
 
         # Constraints from data (halfspaces), this is the transpose of K
         Ktraintrans = get_label_adjusted_train_kernel(trainx, trainy,
-                                               kernel=self.kernel,
-                                               degree=self.degree,
-                                               gamma=self.gamma,
-                                               coef0=self.coef0)
+                                                      kernel=self.kernel,
+                                                      degree=self.degree,
+                                                      gamma=self.gamma,
+                                                      coef0=self.coef0)
 
         # self.Ktraintrans = Ktraintrans
         # print "self.trainx = \n", self.trainx
@@ -279,8 +280,8 @@ class FastKernelClassifier(object):
         c = np.vstack((np.zeros((self.num_train_samples+1, 1)),
                        self.Csoft*np.ones((self.num_train_samples, 1)), 1)).flatten()        # soft 5/7
 
-        A_ub = np.hstack((-Ktraintrans, -np.eye(self.num_train_samples),           # soft 1/7
-                              -np.ones((self.num_train_samples, 1))))
+        a_ub = np.hstack((-Ktraintrans, -np.eye(self.num_train_samples),           # soft 1/7
+                          -np.ones((self.num_train_samples, 1))))
         b_ub = np.zeros(self.num_train_samples)
         lb = np.hstack((-np.ones(self.num_train_samples + 1),
                         np.zeros(self.num_train_samples), -1e9))
@@ -288,8 +289,8 @@ class FastKernelClassifier(object):
                         1e9*np.ones(self.num_train_samples + 1)))
 
         # Speed improvement in Gurobi due to as dictionary inconclusive
-        Aub_dict = {i: {j: v for j, v in enumerate(row)}
-                         for i, row in enumerate(A_ub)}
+        a_ub_dict = {i: {j: v for j, v in enumerate(row)}
+                     for i, row in enumerate(a_ub)}
 
         # Using Gurobi
         m = grb.Model()
@@ -314,9 +315,9 @@ class FastKernelClassifier(object):
 
         constr_list = range(self.num_train_samples)
         for i in constr_list:
-            m.addConstr(grb.quicksum(x[j] * Aub_dict[i][j]
+            m.addConstr(grb.quicksum(x[j] * a_ub_dict[i][j]
                                      for j in var_list) <= b_ub[i])
-            # m.addConstr(grb.quicksum(x[j] * A_ub[i, j]
+            # m.addConstr(grb.quicksum(x[j] * a_ub[i, j]
             #                          for j in var_list) <= b_ub[i])
         m.optimize()
 
@@ -337,7 +338,8 @@ class FastKernelClassifier(object):
         self.eps_opt = weight_opt[-1]
         self.fun_opt = m.objval
         if np.abs(self.eps_opt - self.fun_opt) >= 0.00001:
-            warnings.warn('\neps_opt is not identical to fun_opt. Check formulation. ')
+            warnings.warn('\neps_opt is not identical to fun_opt. eps_opt - fun_opt = %0.6f. ' \
+                          % (self.eps_opt - self.fun_opt))
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
 
@@ -366,10 +368,10 @@ class FastKernelClassifier(object):
         if np.abs(self.eps_opt) <= 0.00001:
             warnings.warn('\neps_opt is close to zero. Data not separable. ')
         Ktesttrans = get_label_adjusted_test_kernel(self.trainx, testx,
-                                               kernel=self.kernel,
-                                               degree=self.degree,
-                                               gamma=self.gamma,
-                                               coef0=self.coef0)
+                                                    kernel=self.kernel,
+                                                    degree=self.degree,
+                                                    gamma=self.gamma,
+                                                    coef0=self.coef0)
 
         return np.sign(np.dot(Ktesttrans, self.weight_opt))
 
@@ -431,11 +433,11 @@ class FastKernelClassifier(object):
             fig, ax = plt.subplots(1, 1)
             xx = np.c_[xx1.ravel(), xx2.ravel()]
             # This line overwrites self.testx
-            Z = self.predict(xx)
+            z = self.predict(xx)
 
-            Z = Z.reshape(xx1.shape)
+            z = z.reshape(xx1.shape)
             # colormap is coolwarm
-            out = ax.contourf(xx1, xx2, Z, cmap=plt.cm.coolwarm, alpha=0.8)
+            out = ax.contourf(xx1, xx2, z, cmap=plt.cm.coolwarm, alpha=0.8)
             ax.scatter(self.trainx[:, 0], self.trainx[:, 1], c=self.trainy,
                        cmap=plt.cm.coolwarm, s=80, marker='x', edgecolors='face')
 
@@ -451,8 +453,8 @@ class FastKernelClassifier(object):
                        c=np.array(self.testy)[np.nonzero(idx_bad)[0]],
                        cmap=plt.cm.coolwarm, s=120, marker='$\odot$', edgecolors='face')
 
-            ax.set_xlabel('trainx[:, 0] and test[:, 0] - Attribute 1')
-            ax.set_ylabel('trainx[:, 1] and test[:, 1] - Attribute 2')
+            ax.set_xlabel('trainx[:, 0] and testx[:, 0]    |    Attribute 1')
+            ax.set_ylabel('trainx[:, 1] and testx[:, 1]    |    Attribute 2')
             title_string = "FKC - Training data and decision surface for: \nKernel = %s, " \
                            "degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, Csoft =  %4.4f" % (
                             self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
@@ -554,79 +556,115 @@ if __name__ == '__main__':
     import os
     os.chdir('C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\ml_center_project\\src')
 
-    # # Testing extended CIRCLE
-    # print "FKC: Testing extended circular problem \n"
-    # # works with scipy (Scipy bug 'Optimization failed. Unable to find a feasible starting point.')
-    # # trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [4, 5.5]])
-    # # trY = [1, 1, 1, 1, -1, -1, -1, -1]
-    # trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.]])
-    # trY = [1, 1, 1, 1, -1, -1, -1, -1]
-    # tsX = np.array([[0, 2], [3, 3], [6, 3]])
-    # tsY = [1, -1, 1]
-    #
-    # kernel = 'poly'
-    # degree = 2
-    # gamma = 1
-    # coef0 = 1
-    # Csoft = 10.0
-    #
-    # print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
-    #       % (kernel, degree, gamma, coef0, Csoft)
-    # print "-" * 70
-    # fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
-    #                            coef0=coef0, Csoft=Csoft)
-    # fkc.fit_grb(trX, trY)
-    # # fkc.fit(trX, trY)
-    # print "fkc.eps_opt = ", fkc.eps_opt
-    # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-    # print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-    # print "fkc.fun_opt = ", fkc.fun_opt
-    # ftest = fkc.predict(tsX)
-    # print "tsX = \n", tsX
-    # print "fkc.predict(tsX) = \n", ftest
-    # print "tsY = \n", tsY
-    # if not (abs(ftest - tsY) <= 0.001).all():
-    #     print "*** Test set not classified correctly. ***"
-    # ftest = fkc.predict(trX)
-    # print "trX = \n", trX
-    # print "fkc.predict(trX) = \n", ftest
-    # print "trY = \n", trY
-    # if not (abs(ftest - trY) <= 0.001).all():
-    #     print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-    # fkc.plot2d()
+    print 80 * "-"
+    print 18 * " " + "Quick tests: Machine learning center module"
+    print 80 * "-"
+    print 2 * " " + "(1) FKC: Testing OR problem"
+    print 2 * " " + "(2) FKC: Testing extended 2-dimensional circular data"
+    print 2 * " " + "(3) FKC: Testing another extended 2-dimensional circular data"
+    print 80 * "-"
 
-    # Include a small dataset to run module: OR problem
-    print "Testing OR:"
-    # Swapping last two training samples affects 'fit':  eps_opt<>fun_opt
-    trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
-    trY = [1, -1, 1, -1]
-    tsX = np.array([[1, 2], [-3, 2], [6, -1]])
-    tsY = [1, -1, 1]
+    user_in = 0
+    bad_input = True
+    while bad_input:
+        try:
+            user_in = int(raw_input("Make selection: "))
+            bad_input = False
+        except ValueError as e:
+            print "%s is not a valid selection. Please try again. "\
+                  % e.args[0].split(':')[1]
 
-    kernel = 'poly'
-    degree = 2
-    gamma = 1
-    coef0 = 1
-    Csoft = 22222
+    print "\n\n"
+    if user_in == 1:
+        print "(1) FKC: Testing OR problem \n"
+        # Swapping last two training samples affects 'fit':  eps_opt<>fun_opt
+        trX = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]])
+        trY = [1, -1, 1, -1]
+        tsX = np.array([[1, 2], [-3, 2], [6, -1]])
+        tsY = [1, -1, 1]
 
-    print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
-          % (kernel, degree, gamma, coef0, Csoft)
-    print "-" * 70
-    fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
-                               coef0=coef0, Csoft=Csoft)
+        kernel = 'poly'
+        degree = 2
+        gamma = 1
+        coef0 = 1
+        Csoft = 22222
 
-    # fkc.fit_grb(trX, trY)
-    fkc.fit(trX, trY)
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+              % (kernel, degree, gamma, coef0, Csoft)
+        print "-" * 70
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
+                                   coef0=coef0, Csoft=Csoft)
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "tr_error = ", fkc.score_train()
+        print "tsX = \n", tsX
+        print "tsY = \n", tsY
+        print "ftest = \n", fkc.predict(tsX)
+        print "ts_error = ", fkc.score(tsX, tsY)
+        fkc.plot2d()
+    elif user_in == 2:
+        print "(2) FKC: Testing extended 2-dimensional circular data \n"
+        # works with scipy (Scipy bug 'Optimization failed. Unable to find a feasible starting point.')
+        # trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [4, 5.5]])
+        # trY = [1, 1, 1, 1, -1, -1, -1, -1]
+        trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.]])
+        trY = [1, 1, 1, 1, -1, -1, -1, -1]
+        tsX = np.array([[0, 2], [3, 3], [6, 3]])
+        tsY = [1, -1, 1]
 
-    print "fkc.eps_opt = ", fkc.eps_opt
-    print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-    print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-    print "fkc.fun_opt = ", fkc.fun_opt
+        kernel = 'poly'
+        degree = 2
+        gamma = 1
+        coef0 = 1
+        Csoft = 10.0
 
-    print "tsX = \n", tsX
-    print "tsY = \n", tsY
-    print "ftest = \n", fkc.predict(tsX)
-    print "ts_error = ", fkc.score(tsX, tsY)
-    print "tr_error = ", fkc.score_train()
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+              % (kernel, degree, gamma, coef0, Csoft)
+        print "-" * 70
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
+                                   coef0=coef0, Csoft=Csoft)
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "tr_error = ", fkc.score_train()
+        print "tsX = \n", tsX
+        print "tsY = \n", tsY
+        print "ftest = \n", fkc.predict(tsX)
+        print "ts_error = ", fkc.score(tsX, tsY)
+        fkc.plot2d()
+    elif user_in == 3:
+        print "(3) FKC: Testing another extended 2-dimensional circular data \n"
+        trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [4, 5.5]])
+        trY = [1, 1, 1, 1, -1, -1, -1, -1]
+        tsX = np.array([[0, 2], [3, 3], [6, 3]])
+        tsY = [1, -1, 1]
 
-    fkc.plot2d()
+        kernel = 'poly'
+        degree = 2
+        gamma = 1
+        coef0 = 1
+        Csoft = 10.0
+
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
+              % (kernel, degree, gamma, coef0, Csoft)
+        print "-" * 70
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
+                                   coef0=coef0, Csoft=Csoft)
+        fkc.fit_grb(trX, trY)
+        # fkc.fit(trX, trY)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "tr_error = ", fkc.score_train()
+        print "tsX = \n", tsX
+        print "tsY = \n", tsY
+        print "ftest = \n", fkc.predict(tsX)
+        print "ts_error = ", fkc.score(tsX, tsY)
+        fkc.plot2d()
+    else:
+        print "Invalid selection. Program terminating. "

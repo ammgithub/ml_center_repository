@@ -1,5 +1,5 @@
 """
-Created on October 25, 2017
+Created on November 29, 2017
 
 Running ml_center
 
@@ -10,7 +10,7 @@ vector of weights in some instances.
 """
 
 import numpy as np
-from ml_center_module import FastKernelClassifier
+from ml_center_module import FastKernelClassifier, print_output
 from sklearn import datasets
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -73,31 +73,37 @@ if __name__ == '__main__':
         degree = 2
         gamma = 1
         coef0 = 1
-        Csoft = 100
+        Csoft = 0.013
 
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
+
+        title_info = 'Scipy linprog soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
         fkc.fit_grb(trX, trY)
-        # fkc.fit(trX, trY)
-        print "fkc.eps_opt = ", fkc.eps_opt
-        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "fkc.fun_opt = ", fkc.fun_opt
-        ftest = fkc.predict(tsX)
-        print "tsX = \n", tsX
-        print "fkc.predict(tsX) = \n", ftest
-        print "tsY = \n", tsY
-        if not (abs(ftest - tsY) <= 0.001).all():
-            print "*** Test set not classified correctly. ***"
-        ftest = fkc.predict(trX)
-        print "trX = \n", trX
-        print "fkc.predict(trX) = \n", ftest
-        print "trY = \n", trY
-        if not (abs(ftest - trY) <= 0.001).all():
-            print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-        fkc.plot2d(0.02)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Scipy linprog hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
     elif user_in == 2:
         print "(2) FKC: Testing AND problem \n"
         # Testing AND
@@ -106,8 +112,6 @@ if __name__ == '__main__':
         tsX = np.array([[1, 2], [-3, 2], [6, -1]])
         tsY = [1, -1, 1]
 
-        # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.10000  # shift in separator
-        # kernel = 'poly'; degree = 1; gamma = 1; coef0 = 1; Csoft = 0.00001  # incomplete sep
         kernel = 'poly'
         degree = 4
         gamma = 1
@@ -118,25 +122,31 @@ if __name__ == '__main__':
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
+
+        title_info = 'Scipy linprog soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
         fkc.fit_grb(trX, trY)
-        # fkc.fit(trX, trY)
-        print "fkc.eps_opt = ", fkc.eps_opt
-        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "fkc.fun_opt = ", fkc.fun_opt
-        ftest = fkc.predict(tsX)
-        print "tsX = \n", tsX
-        print "fkc.predict(tsX) = \n", ftest
-        print "tsY = \n", tsY
-        if not (abs(ftest - tsY) <= 0.001).all():
-            print "*** Test set not classified correctly. ***"
-        ftest = fkc.predict(trX)
-        print "trX = \n", trX
-        print "fkc.predict(trX) = \n", ftest
-        print "trY = \n", trY
-        if not (abs(ftest - trY) <= 0.001).all():
-            print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-        fkc.plot2d(0.02)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Scipy linprog hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
     elif user_in == 3:
         print "(3) FKC: Testing 2-dimensional circular data \n"
         # Testing CIRCLE
@@ -144,7 +154,7 @@ if __name__ == '__main__':
         trY = [1, 1, 1, 1, -1, -1, -1]
         tsX = np.array([[0, 2], [3, 3], [6, 3]])
         tsY = [1, -1, 1]
-        # kernel = 'poly'; degree = 2; gamma = 1; coef0 = 1; Csoft = 0.10000  # one point misclass
+        # Csoft = 0.10000 misclassifies the training data
         kernel = 'poly'
         degree = 2
         gamma = 1
@@ -156,24 +166,31 @@ if __name__ == '__main__':
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
         fkc.fit_grb(trX, trY)
-        # fkc.fit(trX, trY)
-        print "fkc.eps_opt = ", fkc.eps_opt
-        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "fkc.fun_opt = ", fkc.fun_opt
-        ftest = fkc.predict(tsX)
-        print "tsX = \n", tsX
-        print "fkc.predict(tsX) = \n", ftest
-        print "tsY = \n", tsY
-        if not (abs(ftest - tsY) <= 0.001).all():
-            print "*** Test set not classified correctly. ***"
-        ftest = fkc.predict(trX)
-        print "trX = \n", trX
-        print "fkc.predict(trX) = \n", ftest
-        print "trY = \n", trY
-        if not (abs(ftest - trY) <= 0.001).all():
-            print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-        fkc.plot2d(0.02)
+
+        title_info = 'Scipy linprog soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Scipy linprog hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
     elif user_in == 4:
         print "(4) FKC: Testing extended 2-dimensional circular data \n"
         # Testing extended CIRCLE
@@ -185,31 +202,39 @@ if __name__ == '__main__':
         degree = 2
         gamma = 0.1
         coef0 = 1
-        Csoft = 1000.
+        Csoft = 0.1000
 
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f" \
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-        fkc.fit_grb(trX, trY)
+
+        # message: 'Optimization failed. Unable to find a feasible starting point.'
+        # title_info = 'Scipy linprog soft fit:'
+        # print "\n" + title_info
+        # print 25 * "-"
         # fkc.fit(trX, trY)
-        print "fkc.eps_opt = ", fkc.eps_opt
-        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "fkc.fun_opt = ", fkc.fun_opt
-        ftest = fkc.predict(tsX)
-        print "tsX = \n", tsX
-        print "fkc.predict(tsX) = \n", ftest
-        print "tsY = \n", tsY
-        if not (abs(ftest - tsY) <= 0.001).all():
-            print "*** Test set not classified correctly. ***"
-        ftest = fkc.predict(trX)
-        print "trX = \n", trX
-        print "fkc.predict(trX) = \n", ftest
-        print "trY = \n", trY
-        if not (abs(ftest - trY) <= 0.001).all():
-            print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-        fkc.plot2d(0.02)
+        # print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
+        # message: 'Optimization failed. Unable to find a feasible starting point.'
+        # title_info = 'Scipy linprog hard fit:'
+        # print "\n" + title_info
+        # print 25 * "-"
+        # fkc.fit_hard(trX, trY)
+        # print_output(fkc, tsX, tsY, title_info)
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print_output(fkc, tsX, tsY, title_info)
+
     elif user_in == 5:
         print "(5) FKC: Testing 2 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
         # Testing 2 attribute IRIS
@@ -220,11 +245,11 @@ if __name__ == '__main__':
         trY = iris.target[:100]
         trY = [i if i == 1 else -1 for i in trY]
 
-        kernel = 'linear'
+        kernel = 'rbf'
         degree = 1
         gamma = 1
         coef0 = 1
-        Csoft = 10000
+        Csoft = 0.10000
 
         print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
@@ -234,20 +259,29 @@ if __name__ == '__main__':
         # kernel = linear, degree = 1, gamma = 1.00, coef0 = 1.00, Csoft = 10000.0000
         # fkc.fit() results in incorrect classification, fkc.fit_grb() is okay
         #####################################################################
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
         fkc.fit_grb(trX, trY)
-        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "fkc.fun_opt = ", fkc.fun_opt
-        ftest = fkc.predict(trX)
-        print "trX = ", trX
-        print "fkc.predict(trX) = ", ftest
-        print "trY = ", trY
-        if not (abs(ftest - trY) <= 0.001).all():
-            print "*** Training set not classified correctly. ***"
-        print "No prodiction done."
-        fkc.plot2d(0.02)
+        if title_info[-9:] == 'soft fit:':
+            print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "tr_accuracy = ", fkc.score_train()
+        fkc.plot2d(this_title_info=title_info)
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        if title_info[-9:] == 'soft fit:':
+            print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "tr_accuracy = ", fkc.score_train()
+        fkc.plot2d(this_title_info=title_info)
+
     elif user_in == 6:
         print "(6) FKC: Testing 4 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
         # Testing 4 attribute IRIS
@@ -257,6 +291,7 @@ if __name__ == '__main__':
         # trX = iris.data[:100, :]
         trY = iris.target[:100]
         trY = [i if i == 1 else -1 for i in trY]
+
         kernel = 'poly'
         degree = 4
         gamma = 1
@@ -267,20 +302,27 @@ if __name__ == '__main__':
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
         fkc.fit_grb(trX, trY)
-        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "fkc.fun_opt = ", fkc.fun_opt
-        ftest = fkc.predict(trX)
-        print "trX = ", trX
-        print "fkc.predict(trX) = ", ftest
-        print "trY = ", np.array(trY, 'float')
-        if not (abs(ftest - trY) <= 0.001).all():
-            print "*** Training set not classified correctly. ***"
-        print "No prodiction done."
-        fkc.plot2d(0.02)
+        if title_info[-9:] == 'soft fit:':
+            print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "tr_accuracy = ", fkc.score_train()
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        if title_info[-9:] == 'soft fit:':
+            print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "tr_accuracy = ", fkc.score_train()
+
     elif user_in == 7:
         print "(7) FKC: Computing generalization error for 2-class IRIS dataset (100 experiments)"
         #####################################################################
@@ -496,7 +538,6 @@ if __name__ == '__main__':
         print "Elapsed time %4.1f seconds." % (time() - t)
     else:
         print "Invalid selection. Program terminating. "
-    print "Finished."
 
 
 

@@ -83,7 +83,7 @@ class FastKernelClassifier(object):
     References
     ----------
     """
-    def __init__(self, kernel='linear', degree=3, gamma=1, coef0=0.0, Csoft=10000.0):
+    def __init__(self, kernel='linear', degree=3, gamma=1.0, coef0=0.0, Csoft=10000.0):
         """
         :param kernel:  Type of kernel, 'poly', 'rbf', default is 'linear'
         :type kernel:   string
@@ -93,7 +93,7 @@ class FastKernelClassifier(object):
 
         :param gamma:   Radial-basis function kernels. gamma = 1 / 2 sigma^2.
                         polynomial kernels: gamma is a multiplier of u*v
-        :type gamma:    int
+        :type gamma:    float
 
         :param coef0:   Bias for polynomial kernels only, default = 0.0
         :type coef0:    float
@@ -116,6 +116,10 @@ class FastKernelClassifier(object):
         self.pen_opt = None
         self.eps_opt = None
         self.fun_opt = None
+
+        # plot2d: run problems without training data
+        self.testx = np.zeros((2, 2))
+        self.testy = np.zeros(2)
 
     def fit(self, trainx, trainy):
         """
@@ -496,7 +500,7 @@ class FastKernelClassifier(object):
 
     def score(self, testx, testy):
         """
-        Computes the generalization error for a clearly defined test set
+        Computes the accuracy for a clearly defined test set
         consisting of inputs 'testx' and labels 'testy'.
 
         :param testx:   inputs for test set (n_test by l)
@@ -509,22 +513,22 @@ class FastKernelClassifier(object):
         self.testx = testx
         self.testy = testy
 
-        # multiplication by 1 converts True/False to 1/0
+        # accuracy: multiplication by 1 converts True/False to 1/0
         return sum((testy == self.predict(testx)) * 1) / float(len(testy))
 
     def score_train(self):
         """
-        Verifies the quality of the training date separation.
+        Verifies the accuracy of the training date separation.
 
         """
         if not (abs(self.predict(self.trainx) - self.trainy) <= 0.001).all():
             print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
 
-        # multiplication by 1 converts True/False to 1/0
+        # accuracy: multiplication by 1 converts True/False to 1/0
         return sum((self.trainy == self.predict(self.trainx)) * 1) /\
             float(len(self.trainy))
 
-    def plot2d(self, title_info=' ', meshstep=0.02):
+    def plot2d(self, this_title_info=' ', meshstep=0.02):
         """
         Plot simple examples that have 2-dimensional input training samples
         (2 features)
@@ -534,7 +538,7 @@ class FastKernelClassifier(object):
         meshstep    :   float, (default=0.02)
                         Precision in meshgrid, smaller values result in smoother functions.
 
-        title_info :    Additional information that can be passed on to figure
+        this_title_info :    Additional information that can be passed on to figure
                         string
 
         Returns
@@ -561,8 +565,8 @@ class FastKernelClassifier(object):
                        cmap=plt.cm.coolwarm, s=80, marker='x', edgecolors='face')
 
             # Split the test set into correctly and incorrectly classified
-            idx_good = (fkc.testy == fkc.predict(fkc.testx)) * 1
-            idx_bad = ~(fkc.testy == fkc.predict(fkc.testx)) * 1
+            idx_good = (self.testy == self.predict(self.testx)) * 1
+            idx_bad = ~(self.testy == self.predict(self.testx)) * 1
             ax.scatter(self.testx[np.nonzero(idx_good), 0],
                        self.testx[np.nonzero(idx_good), 1],
                        c=np.array(self.testy)[np.nonzero(idx_good)[0]],
@@ -574,9 +578,15 @@ class FastKernelClassifier(object):
 
             ax.set_xlabel('trainx[:, 0] and testx[:, 0]    |    Attribute 1')
             ax.set_ylabel('trainx[:, 1] and testx[:, 1]    |    Attribute 2')
-            title_string = title_info + " FKC - Training and test data and decision surface for: " \
-                "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, Csoft =  %4.4f" % (
+            if this_title_info[-9:] == 'soft fit:':
+                title_string = this_title_info + " FKC - Training and test data and decision surface for: " \
+                    "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, Csoft =  %4.4f" % (
                             self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
+            else:
+                # do not display Csoft
+                title_string = this_title_info + " FKC - Training and test data and decision surface for: " \
+                    "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" % (
+                            self.kernel, self.degree, self.gamma, self.coef0)
             ax.set_title(title_string)
             plt.grid()
             plt.show()
@@ -668,20 +678,21 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
     return Ktest.T
 
 
-def print_output(fkc, tsX, tsY, title_info):
+def print_output(this_fkc, testx, testy, this_title_info):
     """
     Simple output routine to display results and figure:
 
     """
-    print "fkc.eps_opt = ", fkc.eps_opt
-    print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-    print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-    print "tr_error = ", fkc.score_train()
-    print "tsX = \n", tsX
-    print "tsY = \n", tsY
-    print "ftest = \n", fkc.predict(tsX)
-    print "ts_error = ", fkc.score(tsX, tsY)
-    fkc.plot2d(title_info=title_info)
+    print "fkc.eps_opt = ", this_fkc.eps_opt
+    print "fkc.weight_opt  (l+1-vector) = \n", this_fkc.weight_opt
+    if this_title_info[-9:] == 'soft fit:':
+        print "fkc.pen_opt (l-vector) = \n", this_fkc.pen_opt
+    print "tr_accuracy = ", this_fkc.score_train()
+    print "testx = \n", testx
+    print "testy = \n", testy
+    print "ftest = \n", this_fkc.predict(testx)
+    print "ts_accuracy = ", this_fkc.score(testx, testy)
+    this_fkc.plot2d(this_title_info=this_title_info)
 
 if __name__ == '__main__':
     """

@@ -40,9 +40,10 @@ if __name__ == '__main__':
     print 2 * " " + "(4) FKC: Testing extended 2-dimensional circular data"
     print 2 * " " + "(5) FKC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
     print 2 * " " + "(6) FKC: IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
-    print 2 * " " + "(7) FKC: Computing generalization error for 2-class IRIS dataset(100 experiments)"
+    print 2 * " " + "(7) FKC: Gurobi soft fit generalization error for 2-class IRIS dataset(100 experiments)"
     print 2 * " " + "(8) FKC: BREAST CANCER dataset Testing (all samples)"
-    print 2 * " " + "(9) FKC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
+    print 2 * " " + "(9) FKC: Gurobi soft fit generalization error for BREAST CANCER dataset (100 experiments)"
+    print 2 * " " + "(10) FKC: Gurobi hard fit generalization error for BREAST CANCER dataset (100 experiments)"
     print 80 * "-"
 
     user_in = 0
@@ -324,9 +325,9 @@ if __name__ == '__main__':
         print "tr_accuracy = ", fkc.score_train()
 
     elif user_in == 7:
-        print "(7) FKC: Computing generalization error for 2-class IRIS dataset (100 experiments)"
+        print "(7) FKC: Gurobi soft fit generalization error for 2-class IRIS dataset (100 experiments)"
         #####################################################################
-        # Testing IRIS CLASSES 1 AND 2                                      #
+        # Soft margin: Testing IRIS CLASSES 1 AND 2                                      #
         # Classes:              2                                           #
         # Samples per class:    50(Setosa), 50(versicolor)                 #
         # Samples total:        100                                         #
@@ -353,7 +354,6 @@ if __name__ == '__main__':
 
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                    coef0=coef0, Csoft=Csoft)
-
         t = time()
         fkc_gen_error_list = []
         num_experiments = 100
@@ -365,20 +365,15 @@ if __name__ == '__main__':
             (num_test_samples, num_features) = tsX.as_matrix().shape
 
             fkc.fit_grb(trX.as_matrix(), trY)
-            # fkc.fit(trX, trY)
-            ftest = fkc.predict(tsX.as_matrix())
             print "fkc.eps_opt = ", fkc.eps_opt
-            # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-            # print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-            # print "fkc.fun_opt = ", fkc.fun_opt
-            num_wrong = 1 * (ftest != tsY).sum()
-            fkc_gen_error_list.append(num_wrong / float(num_test_samples))
+            # fkc.score() returns accuracy, want gen error
+            fkc_gen_error_list.append(1 - fkc.score(tsX.as_matrix(), tsY))
 
         fkc_gen_error = np.array(fkc_gen_error_list).mean()
         if kernel == 'rbf':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                        'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_iris12_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+            filename = 'fkc_iris12_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_soft_gen_error_%0.4f.pickle' \
                        % (kernel, gamma, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
@@ -386,7 +381,7 @@ if __name__ == '__main__':
         elif kernel == 'poly':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                        'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_iris12_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+            filename = 'fkc_iris12_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_soft_gen_error_%0.4f.pickle' \
                        % (kernel, degree, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
@@ -395,21 +390,21 @@ if __name__ == '__main__':
             # Linear kernel: degree = 1, coef0 = 0
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                        'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_iris12_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+            filename = 'fkc_iris12_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_soft_gen_error_%0.4f.pickle' \
                        % (kernel, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()
 
-        print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
+        print "Generatlization error IRIS dataset (%d experiments): " % num_experiments, "\n", \
             np.array(fkc_gen_error_list)
-        print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
+        print "\nAverage Generatlization Error IRIS dataset (%d experiments): " \
               % num_experiments, "%.3f" % fkc_gen_error
         print "Elapsed time %4.1f seconds." % (time() - t)
     elif user_in == 8:
         print "(8) FKC: Testing BREAST CANCER dataset (all samples) \n"
         #####################################################################
-        # Testing BREAST CANCER                                             #
+        # Soft margin: Testing BREAST CANCER                                             #
         # Classes:              2                                           #
         # Samples per class:    212(Malignant), 357(Benign)                 #
         # Samples total:        569                                         #
@@ -422,11 +417,12 @@ if __name__ == '__main__':
         trX = scaler.fit_transform(trX)
         trY = bc_data.target
         trY = np.array([i if i == 1 else -1 for i in trY])
+
         kernel = 'poly'
         degree = 4
         gamma = 8
         coef0 = 1
-        Csoft = 10
+        Csoft = 10.0
 
         print "\nkernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, Csoft = %5.4f"\
               % (kernel, degree, gamma, coef0, Csoft)
@@ -439,24 +435,31 @@ if __name__ == '__main__':
         # Gurobi finds optimal solution,
         # (nonzero weights, fkc.fun_opt (GRB) =  -0.45512124496)
         #####################################################################
+
+        title_info = 'Gurobi soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
         fkc.fit_grb(trX, trY)
-        # fkc.fit(trX, trY)
         print "fkc.eps_opt = ", fkc.eps_opt
         print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-        print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-        print "fkc.fun_opt = ", fkc.fun_opt
-        ftest = fkc.predict(trX)
-        print "Skipped printing trX ...\n "
-        print "fkc.predict(trX) = \n", ftest
-        print "trY = \n", trY
-        if not (abs(ftest - trY) <= 0.001).all():
-            print "*** TRAINING SET NOT CLASSIFIED CORRECTLY. ***"
-        print "No prodiction done."
-        fkc.plot2d(0.02)
+        if title_info[-9:] == 'soft fit:':
+            print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "tr_accuracy = ", fkc.score_train()
+
+        title_info = 'Gurobi hard fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        fkc.fit_grb_hard(trX, trY)
+        print "fkc.eps_opt = ", fkc.eps_opt
+        print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
+        if title_info[-9:] == 'soft fit:':
+            print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
+        print "tr_accuracy = ", fkc.score_train()
+
     elif user_in == 9:
-        print "(9) FKC: Computing generalization error for BREAST CANCER dataset (100 experiments)"
+        print "(9) FKC: Gurobi soft fit generalization error for BREAST CANCER dataset (100 experiments)"
         #####################################################################
-        # Testing BREAST CANCER                                             #
+        # Soft margin: Testing BREAST CANCER                                             #
         # Classes:              2                                           #
         # Samples per class:    212(Malignant), 357(Benign)                 #
         # Samples total:        569                                         #
@@ -483,7 +486,6 @@ if __name__ == '__main__':
 
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                    coef0=coef0, Csoft=Csoft)
-
         t = time()
         fkc_gen_error_list = []
         num_experiments = 100
@@ -495,20 +497,15 @@ if __name__ == '__main__':
             (num_test_samples, num_features) = tsX.as_matrix().shape
 
             fkc.fit_grb(trX.as_matrix(), trY)
-            # fkc.fit(trX, trY)
-            ftest = fkc.predict(tsX.as_matrix())
             print "fkc.eps_opt = ", fkc.eps_opt
-            # print "fkc.weight_opt  (l+1-vector) = \n", fkc.weight_opt
-            # print "fkc.pen_opt (l-vector) = \n", fkc.pen_opt
-            # print "fkc.fun_opt = ", fkc.fun_opt
-            num_wrong = 1 * (ftest != tsY).sum()
-            fkc_gen_error_list.append(num_wrong / float(num_test_samples))
+            # fkc.score() returns accuracy, want gen error
+            fkc_gen_error_list.append(1 - fkc.score(tsX.as_matrix(), tsY))
 
         fkc_gen_error = np.array(fkc_gen_error_list).mean()
         if kernel == 'rbf':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_bc_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+            filename = 'fkc_bc_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_soft_gen_error_%0.4f.pickle' \
                        % (kernel, gamma, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
@@ -516,7 +513,7 @@ if __name__ == '__main__':
         elif kernel == 'poly':
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_bc_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+            filename = 'fkc_bc_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_soft_gen_error_%0.4f.pickle' \
                        % (kernel, degree, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
@@ -525,8 +522,84 @@ if __name__ == '__main__':
             # Linear kernel: degree = 1, coef0 = 0
             pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
                         'ml_center_project\\ml_center_results\\'
-            filename = 'fkc_bc_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_gen_error_%0.4f.pickle' \
+            filename = 'fkc_bc_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_soft_gen_error_%0.4f.pickle' \
                        % (kernel, Csoft, myseed, num_experiments, fkc_gen_error)
+            f = open(pathname + filename, 'w')
+            pickle.dump(fkc_gen_error_list, f)
+            f.close()
+
+        print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
+            np.array(fkc_gen_error_list)
+        print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
+              % num_experiments, "%.3f" % fkc_gen_error
+        print "Elapsed time %4.1f seconds." % (time() - t)
+    elif user_in == 10:
+        print "(10) FKC: Gurobi hard fit generalization error for BREAST CANCER dataset (100 experiments)"
+        #####################################################################
+        # Hard margin: Testing BREAST CANCER                                             #
+        # Classes:              2                                           #
+        # Samples per class:    212(Malignant), 357(Benign)                 #
+        # Samples total:        569                                         #
+        # Dimensionality:       30                                          #
+        # Features:             real, positive                              #
+        #####################################################################
+        myseed = 2
+        np.random.seed(myseed)
+        pd.set_option('expand_frame_repr', False)
+        pd.set_option('display.max_rows', 400)
+
+        # All inputs and all labels
+        scaler = MinMaxScaler()
+        bc_data = datasets.load_breast_cancer()
+        df = pd.DataFrame(scaler.fit_transform(bc_data.data))
+        y = bc_data.target
+        y = np.array([i if i == 1 else -1 for i in y])
+
+        kernel = 'poly'
+        degree = 4
+        gamma = 2
+        coef0 = 1
+
+        fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
+                                   coef0=coef0)
+        t = time()
+        fkc_gen_error_list = []
+        num_experiments = 100
+        print "Running %d experiments... \n" % num_experiments
+        for i in range(num_experiments):
+            print "Running experiment: %d" % (i + 1)
+            # 381 train and 188 test samples
+            trX, tsX, trY, tsY = train_test_split(df, y, test_size=0.33)
+            (num_test_samples, num_features) = tsX.as_matrix().shape
+
+            fkc.fit_grb_hard(trX.as_matrix(), trY)
+            print "fkc.eps_opt = ", fkc.eps_opt
+            # fkc.score() returns accuracy, want gen error
+            fkc_gen_error_list.append(1 - fkc.score(tsX.as_matrix(), tsY))
+
+        fkc_gen_error = np.array(fkc_gen_error_list).mean()
+        if kernel == 'rbf':
+            pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                       'ml_center_project\\ml_center_results\\'
+            filename = 'fkc_bc_%s_gamma_%d_coef_%d_seed_%d_num_exper_%d_GRB_hard_gen_error_%0.4f.pickle' \
+                       % (kernel, gamma, coef0, myseed, num_experiments, fkc_gen_error)
+            f = open(pathname + filename, 'w')
+            pickle.dump(fkc_gen_error_list, f)
+            f.close()
+        elif kernel == 'poly':
+            pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                       'ml_center_project\\ml_center_results\\'
+            filename = 'fkc_bc_%s_degree_%d_coef_%d_seed_%d_num_exper_%d_GRB_hard_gen_error_%0.4f.pickle' \
+                       % (kernel, degree, coef0, myseed, num_experiments, fkc_gen_error)
+            f = open(pathname + filename, 'w')
+            pickle.dump(fkc_gen_error_list, f)
+            f.close()
+        else:
+            # Linear kernel: degree = 1, coef0 = 0
+            pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                       'ml_center_project\\ml_center_results\\'
+            filename = 'fkc_bc_%s_degree_1_coef_0_seed_%d_num_exper_%d_GRB_hard_gen_error_%0.4f.pickle' \
+                       % (kernel, myseed, num_experiments, fkc_gen_error)
             f = open(pathname + filename, 'w')
             pickle.dump(fkc_gen_error_list, f)
             f.close()

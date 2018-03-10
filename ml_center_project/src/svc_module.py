@@ -147,12 +147,12 @@ class MySVC(svm.SVC):
             # Split the test set into correctly and incorrectly classified
             idx_good = (self.testy == self.predict(self.testx)) * 1
             idx_bad = ~(self.testy == self.predict(self.testx)) * 1
-            ax.scatter(self.testx[np.nonzero(idx_good), 0],
-                       self.testx[np.nonzero(idx_good), 1],
+            ax.scatter(self.testx[np.nonzero(idx_good), 0][0],
+                       self.testx[np.nonzero(idx_good), 1][0],
                        c=np.array(self.testy)[np.nonzero(idx_good)[0]],
                        cmap=plt.cm.coolwarm, s=80, marker='.', edgecolors='face')
-            ax.scatter(self.testx[np.nonzero(idx_bad), 0],
-                       self.testx[np.nonzero(idx_bad), 1],
+            ax.scatter(self.testx[np.nonzero(idx_bad), 0][0],
+                       self.testx[np.nonzero(idx_bad), 1][0],
                        c=np.array(self.testy)[np.nonzero(idx_bad)[0]],
                        cmap=plt.cm.coolwarm, s=120, marker='$\odot$', edgecolors='face')
 

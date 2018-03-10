@@ -28,6 +28,11 @@ class FastKernelClassifier(object):
     Otherwise use fit(), with significantly reduced performance.
     This includes not finding the optimal vector of weights in some instances.
 
+    The training and testing data are included in the object as "None', they are
+    defined more precisely in the methods:
+
+    fit, fit_grb, fit_hard, fit_grb_hard, predict, and score.
+
     The following kernels are employed:
 
     'linear'
@@ -75,7 +80,7 @@ class FastKernelClassifier(object):
     >>> fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
     >>> fkc.fit(trX, trY)
     >>> ftest = fkc.predict(tsX)
-    >>> fkc.plot2d(0.02)
+    >>> fkc.plot2d()
 
     Notes
     -----
@@ -135,11 +140,11 @@ class FastKernelClassifier(object):
 
         Parameters
         ----------
-        trainx : numpy array of floats, num_train_samples-by-num_features
-                 Input training samples
+        :param trainx:      Input training samples, num_train_samples-by-num_features
+        :type trainx:       numpy array of floats
 
-        trainy : list of numpy array of floats or integers num_train_samples-by-one
-                 Input training labels
+        :param trainy:      Input training labels, num_train_samples-by-one
+        :type trainy:       numpy array of ints
 
         Returns
         -------
@@ -518,7 +523,7 @@ class FastKernelClassifier(object):
 
     def score_train(self):
         """
-        Verifies the accuracy of the training date separation.
+        FKC: Verifies the accuracy of the training date separation.
 
         """
         if not (abs(self.predict(self.trainx) - self.trainy) <= 0.001).all():
@@ -680,7 +685,7 @@ def get_label_adjusted_test_kernel(trainx, testx, **params):
 
 def print_output(this_fkc, testx, testy, this_title_info):
     """
-    Simple output routine to display results and figure:
+    FKC:  Simple output routine to display results and figure:
 
     """
     print "fkc.eps_opt = ", this_fkc.eps_opt

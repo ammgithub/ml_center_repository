@@ -40,10 +40,10 @@ if __name__ == '__main__':
     print 2 * " " + "(4) FKC: Testing extended 2-dimensional circular data"
     print 2 * " " + "(5) FKC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
     print 2 * " " + "(6) FKC: IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
-    print 2 * " " + "(7) FKC: Gurobi soft fit generalization error for 2-class IRIS dataset(100 experiments)"
-    print 2 * " " + "(8) FKC: BREAST CANCER dataset Testing (all samples)"
-    print 2 * " " + "(9) FKC: Gurobi soft fit generalization error for BREAST CANCER dataset (100 experiments)"
-    print 2 * " " + "(10) FKC: Gurobi hard fit generalization error for BREAST CANCER dataset (100 experiments)"
+    print 2 * " " + "(7) FKC: IRIS dataset: Gurobi soft fit generalization error for 2-class (100 experiments)"
+    print 2 * " " + "(8) FKC: BREAST CANCER dataset: Testing (all samples)"
+    print 2 * " " + "(9) FKC: BREAST CANCER dataset: Gurobi soft fit generalization error (100 experiments)"
+    print 2 * " " + "(10) FKC: BREAST CANCER dataset: Gurobi hard fit generalization error (100 experiments)"
     print 80 * "-"
 
     user_in = 0
@@ -81,6 +81,7 @@ if __name__ == '__main__':
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
 
+        # use: print fkc
         title_info = 'Scipy linprog soft fit:'
         print "\n" + title_info
         print 25 * "-"
@@ -124,6 +125,7 @@ if __name__ == '__main__':
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
 
+        # use: print fkc
         title_info = 'Scipy linprog soft fit:'
         print "\n" + title_info
         print 25 * "-"
@@ -166,8 +168,8 @@ if __name__ == '__main__':
               % (kernel, degree, gamma, coef0, Csoft)
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
-        fkc.fit_grb(trX, trY)
 
+        # use: print fkc
         title_info = 'Scipy linprog soft fit:'
         print "\n" + title_info
         print 25 * "-"
@@ -210,6 +212,7 @@ if __name__ == '__main__':
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
 
+        # use: print fkc
         # message: 'Optimization failed. Unable to find a feasible starting point.'
         # title_info = 'Scipy linprog soft fit:'
         # print "\n" + title_info
@@ -237,7 +240,7 @@ if __name__ == '__main__':
         print_output(fkc, tsX, tsY, title_info)
 
     elif user_in == 5:
-        print "(5) FKC: Testing 2 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
+        print "(5) FKC: IRIS dataset: Testing 2 attribute, 2-class version (samples 0,...,99, classes 0, 1) \n"
         # Testing 2 attribute IRIS
         iris = datasets.load_iris()
         trX = iris.data[:100, :]
@@ -261,6 +264,7 @@ if __name__ == '__main__':
         # fkc.fit() results in incorrect classification, fkc.fit_grb() is okay
         #####################################################################
 
+        # use: print fkc
         title_info = 'Gurobi soft fit:'
         print "\n" + title_info
         print 25 * "-"
@@ -284,7 +288,7 @@ if __name__ == '__main__':
         fkc.plot2d(this_title_info=title_info)
 
     elif user_in == 6:
-        print "(6) FKC: Testing 4 attribute, 2-class version of IRIS dataset (samples 0,...,99, classes 0, 1) \n"
+        print "(6) FKC: IRIS dataset: Testing 4 attribute, 2-class version(samples 0,...,99, classes 0, 1) \n"
         # Testing 4 attribute IRIS
         iris = datasets.load_iris()
         scaler = MinMaxScaler()
@@ -304,6 +308,7 @@ if __name__ == '__main__':
         print "-----------------------------------------------------"
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma, coef0=coef0, Csoft=Csoft)
 
+        # use: print fkc
         title_info = 'Gurobi soft fit:'
         print "\n" + title_info
         print 25 * "-"
@@ -325,7 +330,7 @@ if __name__ == '__main__':
         print "tr_accuracy = ", fkc.score_train()
 
     elif user_in == 7:
-        print "(7) FKC: Gurobi soft fit generalization error for 2-class IRIS dataset (100 experiments)"
+        print "(7) FKC: IRIS dataset: Gurobi soft fit generalization error for 2-class (100 experiments)"
         #####################################################################
         # Soft margin: Testing IRIS CLASSES 1 AND 2                                      #
         # Classes:              2                                           #
@@ -354,6 +359,7 @@ if __name__ == '__main__':
 
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                    coef0=coef0, Csoft=Csoft)
+        # use: print fkc
         t = time()
         fkc_gen_error_list = []
         num_experiments = 100
@@ -402,7 +408,7 @@ if __name__ == '__main__':
               % num_experiments, "%.3f" % fkc_gen_error
         print "Elapsed time %4.1f seconds." % (time() - t)
     elif user_in == 8:
-        print "(8) FKC: Testing BREAST CANCER dataset (all samples) \n"
+        print "(8) FKC: BREAST CANCER dataset: Testing (all samples) \n"
         #####################################################################
         # Soft margin: Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -436,6 +442,7 @@ if __name__ == '__main__':
         # (nonzero weights, fkc.fun_opt (GRB) =  -0.45512124496)
         #####################################################################
 
+        # use: print fkc
         title_info = 'Gurobi soft fit:'
         print "\n" + title_info
         print 25 * "-"
@@ -457,7 +464,7 @@ if __name__ == '__main__':
         print "tr_accuracy = ", fkc.score_train()
 
     elif user_in == 9:
-        print "(9) FKC: Gurobi soft fit generalization error for BREAST CANCER dataset (100 experiments)"
+        print "(9) FKC: BREAST CANCER dataset: Gurobi soft fit generalization error (100 experiments)"
         #####################################################################
         # Soft margin: Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -478,14 +485,18 @@ if __name__ == '__main__':
         y = bc_data.target
         y = np.array([i if i == 1 else -1 for i in y])
 
-        kernel = 'poly'
-        degree = 4
+        kernel = 'rbf'
+        degree = 2
+        Csoft = 10000
+        # kernel = 'poly'
+        # degree = 4
+        # Csoft = 10
         gamma = 2
         coef0 = 1
-        Csoft = 10000
 
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                    coef0=coef0, Csoft=Csoft)
+        # use: print fkc
         t = time()
         fkc_gen_error_list = []
         num_experiments = 100
@@ -534,7 +545,7 @@ if __name__ == '__main__':
               % num_experiments, "%.3f" % fkc_gen_error
         print "Elapsed time %4.1f seconds." % (time() - t)
     elif user_in == 10:
-        print "(10) FKC: Gurobi hard fit generalization error for BREAST CANCER dataset (100 experiments)"
+        print "(10) FKC: BREAST CANCER dataset: Gurobi hard fit generalization error (100 experiments)"
         #####################################################################
         # Hard margin: Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -555,13 +566,16 @@ if __name__ == '__main__':
         y = bc_data.target
         y = np.array([i if i == 1 else -1 for i in y])
 
-        kernel = 'poly'
-        degree = 4
+        kernel = 'rbf'
+        degree = 2
+        # kernel = 'poly'
+        # degree = 4
         gamma = 2
         coef0 = 1
 
         fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
                                    coef0=coef0)
+        # use: print fkc
         t = time()
         fkc_gen_error_list = []
         num_experiments = 100

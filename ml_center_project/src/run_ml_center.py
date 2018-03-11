@@ -44,7 +44,8 @@ if __name__ == '__main__':
     print 2 * " " + "(8) FKC: BREAST CANCER dataset: Testing (all samples)"
     print 2 * " " + "(9) FKC: BREAST CANCER dataset: Gurobi soft fit generalization error (100 experiments)"
     print 2 * " " + "(10) FKC: BREAST CANCER dataset: Gurobi hard fit generalization error (100 experiments)"
-    print 2 * " " + "(11) FKC: BREAST CANCER dataset: Computing accuracy (Grb soft) for many (gamma, C) (takes a while)"
+    print 2 * " " + "(11) FKC RBF: BREAST CANCER dataset: Computing accuracy (Grb soft) for many (gamma, C) (takes a while)"
+    print 2 * " " + "(12) FKC POLY: BREAST CANCER dataset: Computing accuracy (Grb soft) for many (gamma, C) (takes a while)"
     print 80 * "-"
     user_in = 0
     bad_input = True
@@ -402,9 +403,9 @@ if __name__ == '__main__':
             pickle.dump(fkc_gen_error_list, f)
             f.close()
 
-        print "Generatlization error IRIS dataset (%d experiments): " % num_experiments, "\n", \
+        print "Generalization error IRIS dataset (%d experiments): " % num_experiments, "\n", \
             np.array(fkc_gen_error_list)
-        print "\nAverage Generatlization Error IRIS dataset (%d experiments): " \
+        print "\nAverage Generalization Error IRIS dataset (%d experiments): " \
               % num_experiments, "%.3f" % fkc_gen_error
         print "Elapsed time %4.1f seconds." % (time() - t)
     elif user_in == 8:
@@ -539,9 +540,9 @@ if __name__ == '__main__':
             pickle.dump(fkc_gen_error_list, f)
             f.close()
 
-        print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
+        print "Generalization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
             np.array(fkc_gen_error_list)
-        print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
+        print "\nAverage Generalization Error BREAST CANCER dataset (%d experiments): " \
               % num_experiments, "%.3f" % fkc_gen_error
         print "Elapsed time %4.1f seconds." % (time() - t)
     elif user_in == 10:
@@ -618,13 +619,13 @@ if __name__ == '__main__':
             pickle.dump(fkc_gen_error_list, f)
             f.close()
 
-        print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
+        print "Generalization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
             np.array(fkc_gen_error_list)
-        print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
+        print "\nAverage Generalization Error BREAST CANCER dataset (%d experiments): " \
               % num_experiments, "%.3f" % fkc_gen_error
         print "Elapsed time %4.1f seconds." % (time() - t)
     elif user_in == 11:
-        print "(9) FKC: BREAST CANCER dataset: Gurobi soft fit generalization error (100 experiments)"
+        print "(11) FKC RBF: BREAST CANCER dataset: Gurobi soft fit generalization error (100 experiments)"
         #####################################################################
         # Soft margin: Testing BREAST CANCER                                             #
         # Classes:              2                                           #
@@ -646,19 +647,13 @@ if __name__ == '__main__':
         y = np.array([i if i == 1 else -1 for i in y])
 
         kernel = 'rbf'
-        degree = 2
-        Csoft = 10000
-        # kernel = 'poly'
-        # degree = 4
-        # Csoft = 10
-        gamma = 1 / (2 * 3. * 3.)
-        coef0 = 1
+        degree = 2  # irrelevant
+        coef0 = 1  # irrelevant
 
         Csoft_list = [1e4, 1e2, 1e0, 1e-2, 1e-4]
         gamma_list = [1/(2 * 3.**2), 1/(2 * 2.**2), 1/(2 * 1.**2),
                       1/(2 * 0.8**2), 1/(2 * 0.6**2), 1/(2 * 0.4**2)]
-        # Csoft_list = [1e4]
-        # gamma_list = [1/(2 * 3.**2)]  # [0.95888297872340422]
+        degree_list = [3]
         accuracy_list = []
 
         for gamma in gamma_list:
@@ -708,9 +703,9 @@ if __name__ == '__main__':
                     pickle.dump(fkc_gen_error_list, f)
                     f.close()
 
-                print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
+                print "Generalization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
                     np.array(fkc_gen_error_list)
-                print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
+                print "\nAverage Generalization Error BREAST CANCER dataset (%d experiments): " \
                       % num_experiments, "%.3f" % fkc_gen_error
                 print "\nAverage Accuracy BREAST CANCER dataset (%d experiments): " \
                       % num_experiments, "%.5f" % (1 - fkc_gen_error)
@@ -718,6 +713,95 @@ if __name__ == '__main__':
                 print "Elapsed time %4.1f seconds." % (time() - t)
         accuracy_array = np.array(accuracy_list)
         accuracy_array = accuracy_array.reshape(6, 5)
+        print "accuracy_array = \n", accuracy_array
+    elif user_in == 12:
+        print "(12) FKC POLY: BREAST CANCER dataset: Gurobi soft fit generalization error (100 experiments)"
+        #####################################################################
+        # Soft margin: Testing BREAST CANCER                                             #
+        # Classes:              2                                           #
+        # Samples per class:    212(Malignant), 357(Benign)                 #
+        # Samples total:        569                                         #
+        # Dimensionality:       30                                          #
+        # Features:             real, positive                              #
+        #####################################################################
+        myseed = 2
+        np.random.seed(myseed)
+        pd.set_option('expand_frame_repr', False)
+        pd.set_option('display.max_rows', 400)
+
+        # All inputs and all labels
+        scaler = MinMaxScaler()
+        bc_data = datasets.load_breast_cancer()
+        df = pd.DataFrame(scaler.fit_transform(bc_data.data))
+        y = bc_data.target
+        y = np.array([i if i == 1 else -1 for i in y])
+
+        kernel = 'poly'
+        gamma = 1
+        coef0 = 1
+
+        Csoft_list = [1e4, 1e2, 1e0, 1e-2, 1e-4]
+        degree_list = [1, 2, 3, 4, 5]
+        degree_list = [3]
+        accuracy_list = []
+
+        for degree in degree_list:
+            for Csoft in Csoft_list:
+                fkc = FastKernelClassifier(kernel=kernel, degree=degree, gamma=gamma,
+                                           coef0=coef0, Csoft=Csoft)
+                # use: print fkc
+                t = time()
+                fkc_gen_error_list = []
+                num_experiments = 100
+                print "Running %d experiments... \n" % num_experiments
+                for i in range(num_experiments):
+                    print "Running experiment: %d" % (i + 1)
+                    # 381 train and 188 test samples
+                    trX, tsX, trY, tsY = train_test_split(df, y, test_size=0.33)
+                    (num_test_samples, num_features) = tsX.as_matrix().shape
+
+                    fkc.fit_grb(trX.as_matrix(), trY)
+                    print "fkc.eps_opt = ", fkc.eps_opt
+                    # fkc.score() returns accuracy, want gen error
+                    fkc_gen_error_list.append(1 - fkc.score(tsX.as_matrix(), tsY))
+
+                fkc_gen_error = np.array(fkc_gen_error_list).mean()
+                if kernel == 'rbf':
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                               'ml_center_project\\ml_center_results\\'
+                    filename = 'fkc_bc_%s_gamma_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_soft_gen_error_%0.4f.pickle' \
+                               % (kernel, gamma, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(fkc_gen_error_list, f)
+                    f.close()
+                elif kernel == 'poly':
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                               'ml_center_project\\ml_center_results\\'
+                    filename = 'fkc_bc_%s_degree_%d_coef_%d_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_soft_gen_error_%0.4f.pickle' \
+                               % (kernel, degree, coef0, Csoft, myseed, num_experiments, fkc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(fkc_gen_error_list, f)
+                    f.close()
+                else:
+                    # Linear kernel: degree = 1, coef0 = 0
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                               'ml_center_project\\ml_center_results\\'
+                    filename = 'fkc_bc_%s_degree_1_coef_0_Csoft_%4.4f_seed_%d_num_exper_%d_GRB_soft_gen_error_%0.4f.pickle' \
+                               % (kernel, Csoft, myseed, num_experiments, fkc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(fkc_gen_error_list, f)
+                    f.close()
+
+                print "Generalization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
+                    np.array(fkc_gen_error_list)
+                print "\nAverage Generalization Error BREAST CANCER dataset (%d experiments): " \
+                      % num_experiments, "%.3f" % fkc_gen_error
+                print "\nAverage Accuracy BREAST CANCER dataset (%d experiments): " \
+                      % num_experiments, "%.5f" % (1 - fkc_gen_error)
+                accuracy_list.append((1 - fkc_gen_error))
+                print "Elapsed time %4.1f seconds." % (time() - t)
+        accuracy_array = np.array(accuracy_list)
+        accuracy_array = accuracy_array.reshape(5, 5)
         print "accuracy_array = \n", accuracy_array
     else:
         print "Invalid selection. Program terminating. "

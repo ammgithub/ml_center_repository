@@ -223,6 +223,7 @@ if __name__ == '__main__':
     print 2 * " " + "(7) SVC: IRIS dataset: Computing generalization error for 2-class (100 experiments)"
     print 2 * " " + "(8) (x) SVC: BREAST CANCER dataset: Testing (all samples)"
     print 2 * " " + "(9) SVC: BREAST CANCER dataset: Computing generalization error (100 experiments)"
+    print 2 * " " + "(11) SVC: BREAST CANCER dataset: Computing accuracy for many (gamma, C) (takes a while)"
     print 80 * "-"
     user_in = 0
     bad_input = True
@@ -532,7 +533,7 @@ if __name__ == '__main__':
         # svc_kernel = 'poly'
         # svc_degree = 4
         # svc_C = 10
-        svc_gamma = 2
+        svc_gamma = 1 / (2 * 3. * 3.)
         svc_coef0 = 1
         svc_cache_size = 200
 
@@ -584,5 +585,103 @@ if __name__ == '__main__':
         print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
             np.array(svc_gen_error_list)
         print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
-              % num_experiments, "%.3f" % svc_gen_error
+              % num_experiments, "%.5f" % svc_gen_error
+        print "\nAverage Accuracy BREAST CANCER dataset (%d experiments): " \
+              % num_experiments, "%.5f" % (1 - svc_gen_error)
         print "Elapsed time %4.1f seconds." % (time() - t)
+    elif user_in == 11:
+        print "(11) SVC: BREAST CANCER dataset: Computing accuracy for many (gamma, C) (takes a while)"
+        #####################################################################
+        # Testing BREAST CANCER                                             #
+        # Classes:              2                                           #
+        # Samples per class:    212(Malignant), 357(Benign)                 #
+        # Samples total:        569                                         #
+        # Dimensionality:       30                                          #
+        # Features:             real, positive                              #
+        #####################################################################
+        myseed = 2
+        np.random.seed(myseed)
+        pd.set_option('expand_frame_repr', False)
+        pd.set_option('display.max_rows', 400)
+
+        # All inputs and all labels
+        scaler = MinMaxScaler()
+        bc_data = datasets.load_breast_cancer()
+        df = pd.DataFrame(scaler.fit_transform(bc_data.data))
+        y = bc_data.target
+        y = np.array([i if i == 1 else -1 for i in y])
+
+        svc_kernel = 'rbf'
+        svc_degree = 2
+        svc_C = 10000
+        # svc_kernel = 'poly'
+        # svc_degree = 4
+        # svc_C = 10
+        svc_gamma = 1 / (2 * 3. * 3.)
+        svc_coef0 = 1
+        svc_cache_size = 200
+
+        svc_C_list = [1e4, 1e2, 1e0, 1e-2, 1e-4]
+        svc_gamma_list = [1/(2 * 3.**2), 1/(2 * 2.**2), 1/(2 * 1.**2),
+                          1/(2 * 0.8**2), 1/(2 * 0.6**2), 1/(2 * 0.4**2)]
+        accuracy_list = []
+
+        for svc_gamma in svc_gamma_list:
+            for svc_C in svc_C_list:
+                mysvc = MySVC(Csoft=svc_C, cache_size=svc_cache_size, coef0=svc_coef0,
+                              degree=svc_degree, gamma=svc_gamma, kernel=svc_kernel)
+                # use: print mysvc
+                t = time()
+                svc_gen_error_list = []
+                num_experiments = 100
+                print "Running %d experiments... \n" % num_experiments
+                for i in range(num_experiments):
+                    print "Running experiment: %d" % (i+1)
+                    # 381 train and 188 test samples
+                    trX, tsX, trY, tsY = train_test_split(df, y, test_size=0.33)
+                    (num_test_samples, num_features) = tsX.as_matrix().shape
+
+                    mysvc.fit(trX.as_matrix(), trY)
+                    # mysvc.score() returns accuracy, want gen error
+                    svc_gen_error_list.append(1 - mysvc.score(tsX.as_matrix(), tsY))
+
+                svc_gen_error = np.array(svc_gen_error_list).mean()
+                if svc_kernel == 'rbf':
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                                'ml_center_project\\ml_center_results\\'
+                    filename = 'svc_bc_%s_gamma_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
+                               % (svc_kernel, svc_gamma, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(svc_gen_error_list, f)
+                    f.close()
+                elif svc_kernel == 'poly':
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                                'ml_center_project\\ml_center_results\\'
+                    filename = 'svc_bc_%s_degree_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
+                               % (svc_kernel, svc_degree, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(svc_gen_error_list, f)
+                    f.close()
+                else:
+                    # Linear kernel: degree = 1, coef0 = 0
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                                'ml_center_project\\ml_center_results\\'
+                    filename = 'svc_bc_%s_degree_1_coef_0_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
+                               % (svc_kernel, myseed, svc_C, num_experiments, svc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(svc_gen_error_list, f)
+                    f.close()
+
+                print "Generatlization error BREAST CANCER dataset (%d experiments): " % num_experiments, "\n", \
+                    np.array(svc_gen_error_list)
+                print "\nAverage Generatlization Error BREAST CANCER dataset (%d experiments): " \
+                      % num_experiments, "%.5f" % svc_gen_error
+                print "\nAverage Accuracy BREAST CANCER dataset (%d experiments): " \
+                      % num_experiments, "%.5f" % (1 - svc_gen_error)
+                accuracy_list.append((1 - svc_gen_error))
+                print "Elapsed time %4.1f seconds." % (time() - t)
+        accuracy_array = np.array(accuracy_list)
+        accuracy_array = accuracy_array.reshape(6, 5)
+        print "accuracy_array = \n", accuracy_array
+    else:
+        print "Invalid selection. Program terminating. "

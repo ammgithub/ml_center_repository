@@ -584,20 +584,109 @@ class FastKernelClassifier(object):
             ax.set_xlabel('trainx[:, 0] and testx[:, 0]    |    Attribute 1')
             ax.set_ylabel('trainx[:, 1] and testx[:, 1]    |    Attribute 2')
             if this_title_info[-9:] == 'soft fit:':
-                title_string = this_title_info + " FKC - Training and test data and decision surface for: " \
-                    "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, Csoft =  %4.4f" % (
-                            self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
+                if self.kernel == 'rbf':
+                    # no degree and no coef0 needed
+                    title_string = this_title_info + " FKC - Training and test data and decision surface for: " \
+                        "\nKernel = %s, gamma =  %1.1f, C =  %4.4f" % (
+                                self.kernel, self.gamma, self.Csoft)
+                if self.kernel == 'poly':
+                    title_string = this_title_info + " FKC - Training and test data and decision surface for: " \
+                        "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, C =  %4.4f" % (
+                                self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
             else:
                 # do not display Csoft
-                title_string = this_title_info + " FKC - Training and test data and decision surface for: " \
-                    "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" % (
-                            self.kernel, self.degree, self.gamma, self.coef0)
+                if self.kernel == 'rbf':
+                    # no degree and no coef0 needed
+                    title_string = this_title_info + " FKC - Training and test data and decision surface for: " \
+                        "\nKernel = %s, gamma =  %1.1f" % (
+                                self.kernel, self.gamma)
+                if self.kernel == 'poly':
+                    title_string = this_title_info + " FKC - Training and test data and decision surface for: " \
+                        "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" % (
+                                self.kernel, self.degree, self.gamma, self.coef0)
             ax.set_title(title_string)
             plt.grid()
             plt.show()
         else:
             return "Input sample dimension must be equal to 2. Exiting. "
 
+    def plot2dtrain(self, this_title_info=' ', meshstep=0.02):
+        """
+        Training data only
+        Plot simple examples that have 2-dimensional input training samples
+        (2 features)
+
+        Parameters
+        ----------
+        meshstep    :   float, (default=0.02)
+                        Precision in meshgrid, smaller values result in smoother functions.
+
+        this_title_info :    Additional information that can be passed on to figure
+                        string
+
+        Returns
+        -------
+        self : object
+        """
+        if self.trainx.shape[1] == 2:
+            x1min = self.trainx[:, 0].min() - 3
+            x1max = self.trainx[:, 0].max() + 3
+            x2min = self.trainx[:, 1].min() - 3
+            x2max = self.trainx[:, 1].max() + 3
+            xx1, xx2 = np.meshgrid(np.arange(x1min, x1max + meshstep, meshstep),
+                                 np.arange(x2min, x2max + meshstep, meshstep))
+
+            fig, ax = plt.subplots(1, 1)
+            xx = np.c_[xx1.ravel(), xx2.ravel()]
+            # This line overwrites self.testx
+            z = self.predict(xx)
+
+            z = z.reshape(xx1.shape)
+            # colormap is coolwarm
+            out = ax.contourf(xx1, xx2, z, cmap=plt.cm.Set2, alpha=0.8)
+
+            idx_pos = (self.trainy == np.ones(len(self.trainy))) * 1
+            idx_neg = ~(self.trainy == np.ones(len(self.trainy))) * 1
+            ax.scatter(self.trainx[np.nonzero(idx_pos), 0][0],
+                       self.trainx[np.nonzero(idx_pos), 1][0],
+                       c=np.array(self.trainy)[np.nonzero(idx_pos)[0]],
+                       cmap=plt.cm.jet, s=80, marker='x', edgecolors='face')
+            ax.scatter(self.trainx[np.nonzero(idx_neg), 0][0],
+                       self.trainx[np.nonzero(idx_neg), 1][0],
+                       c=np.array(self.trainy)[np.nonzero(idx_neg)[0]],
+                       cmap=plt.cm.jet, s=120, marker='o', edgecolors='face')
+
+            # ax.scatter(self.trainx[:, 0], self.trainx[:, 1], c=self.trainy,
+            #            cmap=plt.cm.coolwarm, s=80, marker='x', edgecolors='face')
+
+            ax.set_xlabel('trainx[:, 0]    |    Attribute 1')
+            ax.set_ylabel('trainx[:, 1]    |    Attribute 2')
+            if this_title_info[-9:].lower() == 'soft fit:':
+                if self.kernel == 'rbf':
+                    # no degree and no coef0 needed
+                    title_string = this_title_info + " FKC - Training data and decision surface for: " \
+                        "\nKernel = %s, gamma =  %1.1f, C =  %4.4f" % (
+                                self.kernel, self.gamma, self.Csoft)
+                if self.kernel == 'poly':
+                    title_string = this_title_info + " FKC - Training data and decision surface for: " \
+                        "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, C =  %4.4f" % (
+                                self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
+            else:
+                # do not display Csoft
+                if self.kernel == 'rbf':
+                    # no degree and no coef0 needed
+                    title_string = this_title_info + " FKC - Training data and decision surface for: " \
+                        "\nKernel = %s, gamma =  %1.1f" % (
+                                self.kernel, self.gamma)
+                if self.kernel == 'poly':
+                    title_string = this_title_info + " FKC - Training data and decision surface for: " \
+                        "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" % (
+                                self.kernel, self.degree, self.gamma, self.coef0)
+            ax.set_title(title_string)
+            plt.grid()
+            plt.show()
+        else:
+            return "Input sample dimension must be equal to 2. Exiting. "
 
 def get_label_adjusted_train_kernel(trainx, trainy, **params):
     """

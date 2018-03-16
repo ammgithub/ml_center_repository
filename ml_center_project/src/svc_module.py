@@ -158,9 +158,99 @@ class MySVC(svm.SVC):
 
             ax.set_xlabel('trainx[:, 0] and testx[:, 0]    |    Attribute 1')
             ax.set_ylabel('trainx[:, 1] and testx[:, 1]    |    Attribute 2')
-            title_string = this_title_info + " SVC - Training and test data and decision surface for: " \
-                "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, C =  %4.4f" % (
-                        self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
+            if this_title_info[-9:] == 'soft fit:':
+                if self.kernel == 'rbf':
+                    # no degree and no coef0 needed
+                    title_string = this_title_info + " SVC - Training and test data and decision surface for: " \
+                        "\nKernel = %s, gamma =  %1.1f, C =  %4.4f" % (
+                                self.kernel, self.gamma, self.Csoft)
+                if self.kernel == 'poly':
+                    title_string = this_title_info + " SVC - Training and test data and decision surface for: " \
+                        "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, C =  %4.4f" % (
+                                self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
+            else:
+                # do not display Csoft
+                if self.kernel == 'rbf':
+                    # no degree and no coef0 needed
+                    title_string = this_title_info + " SVC - Training and test data and decision surface for: " \
+                        "\nKernel = %s, gamma =  %1.1f" % (
+                                self.kernel, self.gamma)
+                if self.kernel == 'poly':
+                    title_string = this_title_info + " SVC - Training and test data and decision surface for: " \
+                        "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" % (
+                                self.kernel, self.degree, self.gamma, self.coef0)
+            ax.set_title(title_string)
+            plt.grid()
+            plt.show()
+        else:
+            return "Input sample dimension must be equal to 2. Exiting. "
+
+    def plot2dtrain(self, this_title_info=' ', meshstep=0.02):
+        """
+        Training data only
+        Plot simple examples that have 2-dimensional input training samples
+        (2 features)
+        Parameters
+        ----------
+        meshstep    :   float, (default=0.02)
+                        Precision in meshgrid, smaller values result in smoother functions.
+        this_title_info :    Additional information that can be passed on to figure
+                        string
+        Returns
+        -------
+        self : object
+        """
+        if self.trainx.shape[1] == 2:
+            x1min = self.trainx[:, 0].min() - 3
+            x1max = self.trainx[:, 0].max() + 3
+            x2min = self.trainx[:, 1].min() - 3
+            x2max = self.trainx[:, 1].max() + 3
+            xx1, xx2 = np.meshgrid(np.arange(x1min, x1max + meshstep, meshstep),
+                                 np.arange(x2min, x2max + meshstep, meshstep))
+
+            fig, ax = plt.subplots(1, 1)
+            xx = np.c_[xx1.ravel(), xx2.ravel()]
+            # This line overwrites self.testx: # TODO: true for fkc, but also for svm.SVC()?
+            z = self.predict(xx)
+
+            z = z.reshape(xx1.shape)
+            # colormap is coolwarm
+            out = ax.contourf(xx1, xx2, z, cmap=plt.cm.Set2, alpha=0.8)
+
+            idx_pos = (self.trainy == np.ones(len(self.trainy))) * 1
+            idx_neg = ~(self.trainy == np.ones(len(self.trainy))) * 1
+            ax.scatter(self.trainx[np.nonzero(idx_pos), 0][0],
+                       self.trainx[np.nonzero(idx_pos), 1][0],
+                       c=np.array(self.trainy)[np.nonzero(idx_pos)[0]],
+                       cmap=plt.cm.jet, s=80, marker='x', edgecolors='face')
+            ax.scatter(self.trainx[np.nonzero(idx_neg), 0][0],
+                       self.trainx[np.nonzero(idx_neg), 1][0],
+                       c=np.array(self.trainy)[np.nonzero(idx_neg)[0]],
+                       cmap=plt.cm.jet, s=120, marker='o', edgecolors='face')
+
+            ax.set_xlabel('trainx[:, 0]    |    Attribute 1')
+            ax.set_ylabel('trainx[:, 1]    |    Attribute 2')
+            if this_title_info[-9:].lower() == 'soft fit:':
+                if self.kernel == 'rbf':
+                    # no degree and no coef0 needed
+                    title_string = this_title_info + " SVC - Training data and decision surface for: " \
+                        "\nKernel = %s, gamma =  %1.1f, C =  %4.4f" % (
+                                self.kernel, self.gamma, self.Csoft)
+                if self.kernel == 'poly':
+                    title_string = this_title_info + " SVC - Training data and decision surface for: " \
+                        "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f, C =  %4.4f" % (
+                                self.kernel, self.degree, self.gamma, self.coef0, self.Csoft)
+            else:
+                # do not display Csoft
+                if self.kernel == 'rbf':
+                    # no degree and no coef0 needed
+                    title_string = this_title_info + " SVC - Training data and decision surface for: " \
+                        "\nKernel = %s, gamma =  %1.1f" % (
+                                self.kernel, self.gamma)
+                if self.kernel == 'poly':
+                    title_string = this_title_info + " SVC - Training data and decision surface for: " \
+                        "\nKernel = %s, degree =  %1.1f, gamma =  %1.1f, coef0 =  %1.1f" % (
+                                self.kernel, self.degree, self.gamma, self.coef0)
             ax.set_title(title_string)
             plt.grid()
             plt.show()
@@ -180,6 +270,7 @@ def print_output(this_mysvc, testx, testy, this_title_info):
     print "ftest = \n", this_mysvc.predict(testx)
     print "ts_accuracy = ", this_mysvc.score(testx, testy)
     this_mysvc.plot2d(this_title_info=this_title_info)
+
 
 if __name__ == '__main__':
     """
@@ -218,6 +309,7 @@ if __name__ == '__main__':
     print 2 * " " + "(2) SVC: Testing AND problem"
     print 2 * " " + "(3) SVC: Testing 2-dimensional circular data"
     print 2 * " " + "(4) SVC: Testing extended 2-dimensional circular data"
+    print 2 * " " + "(44) SVC: FIGURES: Testing extended 2-dimensional circular data (no test set)"
     print 2 * " " + "(5) SVC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
     print 2 * " " + "(6) SVC: IRIS dataset: Testing 4-attribute, 2-class version (samples 0,...,99, classes 0, 1)"
     print 2 * " " + "(7) SVC: IRIS dataset: Computing generalization error for 2-class (100 experiments)"
@@ -225,6 +317,12 @@ if __name__ == '__main__':
     print 2 * " " + "(9) SVC: BREAST CANCER dataset: Computing generalization error (100 experiments)"
     print 2 * " " + "(11) SVC RBF: BREAST CANCER dataset: Computing accuracy for many (gamma, C) (takes a while)"
     print 2 * " " + "(12) SVC POLY: BREAST CANCER dataset: Computing accuracy for many (degree, C) (takes a while)"
+    print 2 * " " + "(13) SVC RBF: WINE 3 CLASS (0 vs 1,2): Computing accuracy for many (gamma, C) (takes a while)"
+    print 2 * " " + "(14) SVC POLY: WINE 3 CLASS (0 vs 1,2): Computing accuracy for many (degree, C) (takes a while)"
+    print 2 * " " + "(15) SVC RBF: WINE 3 CLASS (1 vs 0,2): Computing accuracy for many (gamma, C) (takes a while)"
+    print 2 * " " + "(16) SVC POLY: WINE 3 CLASS (1 vs 0,2): Computing accuracy for many (degree, C) (takes a while)"
+    print 2 * " " + "(17) SVC RBF: WINE 3 CLASS (2 vs 0,1):  Computing accuracy for many (gamma, C) (takes a while)"
+    print 2 * " " + "(18) SVC POLY: WINE 3 CLASS (2 vs 0,1): Computing accuracy for many (degree, C) (takes a while)"
     print 80 * "-"
     user_in = 0
     bad_input = True
@@ -338,10 +436,11 @@ if __name__ == '__main__':
 
         svc_kernel = 'rbf'
         svc_degree = 2
-        svc_gamma = 0.1
+        svc_gamma = 0.01
         svc_coef0 = 1
         svc_cache_size = 200
-        svc_C = 1000.
+        # svc_C = 0.1000
+        svc_C = 10000
 
         # use: print mysvc
         print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, svc_C = %5.4f" \
@@ -357,6 +456,38 @@ if __name__ == '__main__':
         mysvc.fit(trX, trY)
         mysvc.load_data(trX, trY, tsX, tsY)
         print_output(mysvc, tsX, tsY, title_info)
+
+    elif user_in == 44:
+        print "(44) SVC: FIGURES: Testing extended 2-dimensional circular data (no test set)\n"
+        # Testing extended CIRCLE without test set
+        trX = np.array([[1, 1], [4, 1], [1, 4], [4, 4], [2, 2], [2, 3], [3, 2], [5, 4.5]])
+        trY = [1, 1, 1, 1, -1, -1, -1, -1]
+        tsX = None
+        tsY = None
+
+        svc_kernel = 'rbf'
+        svc_degree = 2
+        # svc_gamma = 0.1
+        svc_gamma = 10
+        svc_coef0 = 1
+        svc_cache_size = 200
+        # svc_C = 0.1000
+        svc_C = 10000
+
+        # use: print mysvc
+        print "kernel = %s, degree = %d, gamma = %3.2f, coef0 = %3.2f, svc_C = %5.4f" \
+              % (svc_kernel, svc_degree, svc_gamma, svc_coef0, svc_C)
+        print "-----------------------------------------------------"
+
+        mysvc = MySVC(Csoft=svc_C, cache_size=svc_cache_size, coef0=svc_coef0,
+                      degree=svc_degree, gamma=svc_gamma, kernel=svc_kernel)
+
+        title_info = 'SVC soft fit:'
+        print "\n" + title_info
+        print 25 * "-"
+        mysvc.fit(trX, trY)
+        mysvc.load_data(trX, trY, tsX, tsY)
+        mysvc.plot2dtrain(this_title_info=title_info)
 
     elif user_in == 5:
         print "(5) SVC: IRIS dataset: Testing 2-attribute, 2-class version (samples 0,...,99, classes 0, 1) \n"
@@ -617,7 +748,9 @@ if __name__ == '__main__':
         svc_coef0 = 1  # irrelevant
         svc_cache_size = 200
 
-        svc_C_list = [1e4, 1e2, 1e0, 1e-2, 1e-4]
+        # User warning in run_ml_center for [1e-2, 1e-4]
+        # svc_C_list = [1e4, 1e2, 1e0, 1e-2, 1e-4]
+        svc_C_list = [1e4, 1e2, 1e0]
         svc_gamma_list = [1/(2 * 3.**2), 1/(2 * 2.**2), 1/(2 * 1.**2),
                           1/(2 * 0.8**2), 1/(2 * 0.6**2), 1/(2 * 0.4**2)]
         accuracy_list = []
@@ -630,6 +763,7 @@ if __name__ == '__main__':
                 t = time()
                 svc_gen_error_list = []
                 num_experiments = 100
+                print "svc_gamma = %3.4f, svc_C = %3.4f" % (svc_gamma, svc_C)
                 print "Running %d experiments... \n" % num_experiments
                 for i in range(num_experiments):
                     print "Running experiment: %d" % (i+1)
@@ -644,7 +778,7 @@ if __name__ == '__main__':
                 svc_gen_error = np.array(svc_gen_error_list).mean()
                 if svc_kernel == 'rbf':
                     pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
-                                'ml_center_project\\ml_center_results\\'
+                                'ml_center_project\\ml_center_results\\breastcancer\\'
                     filename = 'svc_bc_%s_gamma_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
                                % (svc_kernel, svc_gamma, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
                     f = open(pathname + filename, 'w')
@@ -652,7 +786,7 @@ if __name__ == '__main__':
                     f.close()
                 elif svc_kernel == 'poly':
                     pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
-                                'ml_center_project\\ml_center_results\\'
+                                'ml_center_project\\ml_center_results\\breastcancer\\'
                     filename = 'svc_bc_%s_degree_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
                                % (svc_kernel, svc_degree, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
                     f = open(pathname + filename, 'w')
@@ -661,7 +795,7 @@ if __name__ == '__main__':
                 else:
                     # Linear kernel: degree = 1, coef0 = 0
                     pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
-                                'ml_center_project\\ml_center_results\\'
+                                'ml_center_project\\ml_center_results\\breastcancer\\'
                     filename = 'svc_bc_%s_degree_1_coef_0_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
                                % (svc_kernel, myseed, svc_C, num_experiments, svc_gen_error)
                     f = open(pathname + filename, 'w')
@@ -677,7 +811,7 @@ if __name__ == '__main__':
                 accuracy_list.append((1 - svc_gen_error))
                 print "Elapsed time %4.1f seconds." % (time() - t)
         accuracy_array = np.array(accuracy_list)
-        accuracy_array = accuracy_array.reshape(6, 5)
+        accuracy_array = accuracy_array.reshape(len(svc_gamma_list), len(svc_C_list))
         print "accuracy_array = \n", accuracy_array
     elif user_in == 12:
         print "(12) SVC POLY: BREAST CANCER dataset: Computing accuracy for many (degree, C) (takes a while)"
@@ -706,7 +840,9 @@ if __name__ == '__main__':
         svc_coef0 = 1
         svc_cache_size = 200
 
-        svc_C_list = [1e4, 1e2, 1e0, 1e-2, 1e-4]
+        # User warning in run_ml_center for [1e-2, 1e-4]
+        # svc_C_list = [1e4, 1e2, 1e0, 1e-2, 1e-4]
+        svc_C_list = [1e4, 1e2, 1e0]
         svc_degree_list = [1, 2, 3, 4, 5]
         accuracy_list = []
 
@@ -718,6 +854,7 @@ if __name__ == '__main__':
                 t = time()
                 svc_gen_error_list = []
                 num_experiments = 100
+                print "svc_degree = %3.4f, svc_C = %3.4f" % (svc_degree, svc_C)
                 print "Running %d experiments... \n" % num_experiments
                 for i in range(num_experiments):
                     print "Running experiment: %d" % (i + 1)
@@ -732,7 +869,7 @@ if __name__ == '__main__':
                 svc_gen_error = np.array(svc_gen_error_list).mean()
                 if svc_kernel == 'rbf':
                     pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
-                               'ml_center_project\\ml_center_results\\'
+                               'ml_center_project\\ml_center_results\\breastcancer\\'
                     filename = 'svc_bc_%s_gamma_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
                                % (svc_kernel, svc_gamma, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
                     f = open(pathname + filename, 'w')
@@ -740,7 +877,7 @@ if __name__ == '__main__':
                     f.close()
                 elif svc_kernel == 'poly':
                     pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
-                               'ml_center_project\\ml_center_results\\'
+                               'ml_center_project\\ml_center_results\\breastcancer\\'
                     filename = 'svc_bc_%s_degree_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
                                % (svc_kernel, svc_degree, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
                     f = open(pathname + filename, 'w')
@@ -749,7 +886,7 @@ if __name__ == '__main__':
                 else:
                     # Linear kernel: degree = 1, coef0 = 0
                     pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
-                               'ml_center_project\\ml_center_results\\'
+                               'ml_center_project\\ml_center_results\\breastcancer\\'
                     filename = 'svc_bc_%s_degree_1_coef_0_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
                                % (svc_kernel, myseed, svc_C, num_experiments, svc_gen_error)
                     f = open(pathname + filename, 'w')
@@ -765,7 +902,194 @@ if __name__ == '__main__':
                 accuracy_list.append((1 - svc_gen_error))
                 print "Elapsed time %4.1f seconds." % (time() - t)
         accuracy_array = np.array(accuracy_list)
-        accuracy_array = accuracy_array.reshape(5, 5)
+        accuracy_array = accuracy_array.reshape(len(svc_degree_list), len(svc_C_list))
+        print "accuracy_array = \n", accuracy_array
+    elif user_in == 13:
+        print "(13) SVC RBF: WINE 3 CLASS (0 vs 1,2): Computing accuracy for many (gamma, C) (takes a while)"
+        #####################################################################
+        # Testing WINE                                                      #
+        # Classes:              3                                           #
+        # Samples per class:    [59,71,48]                                  #
+        # Samples total:        178                                         #
+        # Dimensionality:       13                                          #
+        # Features:             real, positive                              #
+        #####################################################################
+        myseed = 2
+        np.random.seed(myseed)
+        pd.set_option('expand_frame_repr', False)
+        pd.set_option('display.max_rows', 400)
+
+        # All inputs and all labels
+        scaler = MinMaxScaler()
+        wine_data = datasets.load_wine()
+        df = pd.DataFrame(scaler.fit_transform(wine_data.data))
+        y = wine_data.target
+        y = np.array([1 if i in [1, 2] else -1 for i in y])
+        num12 = 1 * (y == np.ones(len(y))).sum()
+        assert num12 == 119, "Please check the number of 1s and 2s."
+
+        svc_kernel = 'rbf'
+        svc_degree = 2  # irrelevant
+        svc_coef0 = 1  # irrelevant
+        svc_cache_size = 200
+
+        # User warning in run_ml_center for [1e-2, 1e-4]
+        # svc_C_list = [1e4, 1e2, 1e0, 1e-2, 1e-4]
+        svc_C_list = [1e4, 1e2, 1e0]
+        svc_gamma_list = [1 / (2 * 3. ** 2), 1 / (2 * 2. ** 2), 1 / (2 * 1. ** 2),
+                          1 / (2 * 0.8 ** 2), 1 / (2 * 0.6 ** 2), 1 / (2 * 0.4 ** 2)]
+        accuracy_list = []
+
+        for svc_gamma in svc_gamma_list:
+            for svc_C in svc_C_list:
+                mysvc = MySVC(Csoft=svc_C, cache_size=svc_cache_size, coef0=svc_coef0,
+                              degree=svc_degree, gamma=svc_gamma, kernel=svc_kernel)
+                # use: print mysvc
+                t = time()
+                svc_gen_error_list = []
+                num_experiments = 100
+                print "svc_gamma = %3.4f, svc_C = %3.4f" % (svc_gamma, svc_C)
+                print "Running %d experiments... \n" % num_experiments
+                for i in range(num_experiments):
+                    print "Running experiment: %d" % (i + 1)
+                    # 119 train and 59 test samples
+                    trX, tsX, trY, tsY = train_test_split(df, y, test_size=0.33)
+                    (num_test_samples, num_features) = tsX.as_matrix().shape
+
+                    mysvc.fit(trX.as_matrix(), trY)
+                    # mysvc.score() returns accuracy, want gen error
+                    svc_gen_error_list.append(1 - mysvc.score(tsX.as_matrix(), tsY))
+
+                svc_gen_error = np.array(svc_gen_error_list).mean()
+                if svc_kernel == 'rbf':
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                               'ml_center_project\\ml_center_results\\wine12\\'
+                    filename = 'svc_bc_%s_gamma_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
+                               % (svc_kernel, svc_gamma, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(svc_gen_error_list, f)
+                    f.close()
+                elif svc_kernel == 'poly':
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                               'ml_center_project\\ml_center_results\\wine12\\'
+                    filename = 'svc_bc_%s_degree_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
+                               % (svc_kernel, svc_degree, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(svc_gen_error_list, f)
+                    f.close()
+                else:
+                    # Linear kernel: degree = 1, coef0 = 0
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                               'ml_center_project\\ml_center_results\\wine12\\'
+                    filename = 'svc_bc_%s_degree_1_coef_0_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
+                               % (svc_kernel, myseed, svc_C, num_experiments, svc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(svc_gen_error_list, f)
+                    f.close()
+
+                print "Generalization error WINE 3 CLASS (0 vs 1,2) (%d experiments): " % num_experiments, "\n", \
+                    np.array(svc_gen_error_list)
+                print "\nAverage Generalization Error WINE 3 CLASS (0 vs 1,2) (%d experiments): " \
+                      % num_experiments, "%.5f" % svc_gen_error
+                print "\nAverage Accuracy WINE 3 CLASS (0 vs 1,2) (%d experiments): " \
+                      % num_experiments, "%.5f" % (1 - svc_gen_error)
+                accuracy_list.append((1 - svc_gen_error))
+                print "Elapsed time %4.1f seconds." % (time() - t)
+        accuracy_array = np.array(accuracy_list)
+        accuracy_array = accuracy_array.reshape(len(svc_gamma_list), len(svc_C_list))
+        print "accuracy_array = \n", accuracy_array
+    elif user_in == 14:
+        print "(14) SVC POLY: WINE 3 CLASS (0 vs 1,2): Computing accuracy for many (degree, C) (takes a while)"
+        #####################################################################
+        # Testing WINE                                                      #
+        # Classes:              3                                           #
+        # Samples per class:    [59,71,48]                                  #
+        # Samples total:        178                                         #
+        # Dimensionality:       13                                          #
+        # Features:             real, positive                              #
+        #####################################################################
+        myseed = 2
+        np.random.seed(myseed)
+        pd.set_option('expand_frame_repr', False)
+        pd.set_option('display.max_rows', 400)
+
+        # All inputs and all labels
+        scaler = MinMaxScaler()
+        wine_data = datasets.load_wine()
+        df = pd.DataFrame(scaler.fit_transform(wine_data.data))
+        y = wine_data.target
+        y = np.array([1 if i in [1, 2] else -1 for i in y])
+        num12 = 1 * (y == np.ones(len(y))).sum()
+        assert num12 == 119, "Please check the number of 1s and 2s."
+
+        svc_kernel = 'poly'
+        svc_gamma = 1
+        svc_coef0 = 1
+        svc_cache_size = 200
+
+        # User warning in run_ml_center for [1e-2, 1e-4]
+        # svc_C_list = [1e4, 1e2, 1e0, 1e-2, 1e-4]
+        svc_C_list = [1e4, 1e2, 1e0]
+        svc_degree_list = [1, 2, 3, 4, 5]
+        accuracy_list = []
+
+        for svc_degree in svc_degree_list:
+            for svc_C in svc_C_list:
+                mysvc = MySVC(Csoft=svc_C, cache_size=svc_cache_size, coef0=svc_coef0,
+                              degree=svc_degree, gamma=svc_gamma, kernel=svc_kernel)
+                # use: print mysvc
+                t = time()
+                svc_gen_error_list = []
+                num_experiments = 100
+                print "svc_degree = %3.4f, svc_C = %3.4f" % (svc_degree, svc_C)
+                print "Running %d experiments... \n" % num_experiments
+                for i in range(num_experiments):
+                    print "Running experiment: %d" % (i + 1)
+                    # 119 train and 59 test samples
+                    trX, tsX, trY, tsY = train_test_split(df, y, test_size=0.33)
+                    (num_test_samples, num_features) = tsX.as_matrix().shape
+
+                    mysvc.fit(trX.as_matrix(), trY)
+                    # mysvc.score() returns accuracy, want gen error
+                    svc_gen_error_list.append(1 - mysvc.score(tsX.as_matrix(), tsY))
+
+                svc_gen_error = np.array(svc_gen_error_list).mean()
+                if svc_kernel == 'rbf':
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                               'ml_center_project\\ml_center_results\\wine12\\'
+                    filename = 'svc_bc_%s_gamma_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
+                               % (svc_kernel, svc_gamma, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(svc_gen_error_list, f)
+                    f.close()
+                elif svc_kernel == 'poly':
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                               'ml_center_project\\ml_center_results\\wine12\\'
+                    filename = 'svc_bc_%s_degree_%d_coef_%d_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
+                               % (svc_kernel, svc_degree, svc_coef0, svc_C, myseed, num_experiments, svc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(svc_gen_error_list, f)
+                    f.close()
+                else:
+                    # Linear kernel: degree = 1, coef0 = 0
+                    pathname = 'C:\\Users\\amalysch\\PycharmProjects\\ml_center_repository\\' \
+                               'ml_center_project\\ml_center_results\\wine12\\'
+                    filename = 'svc_bc_%s_degree_1_coef_0_svc_C_%4.4f_seed_%d_num_exper_%d_gen_error_%0.4f.pickle' \
+                               % (svc_kernel, myseed, svc_C, num_experiments, svc_gen_error)
+                    f = open(pathname + filename, 'w')
+                    pickle.dump(svc_gen_error_list, f)
+                    f.close()
+
+                print "Generalization error WINE 3 CLASS (0 vs 1,2) (%d experiments): " % num_experiments, "\n", \
+                    np.array(svc_gen_error_list)
+                print "\nAverage Generalization Error WINE 3 CLASS (0 vs 1,2) (%d experiments): " \
+                      % num_experiments, "%.5f" % svc_gen_error
+                print "\nAverage Accuracy WINE 3 CLASS (0 vs 1,2) (%d experiments): " \
+                      % num_experiments, "%.5f" % (1 - svc_gen_error)
+                accuracy_list.append((1 - svc_gen_error))
+                print "Elapsed time %4.1f seconds." % (time() - t)
+        accuracy_array = np.array(accuracy_list)
+        accuracy_array = accuracy_array.reshape(len(svc_degree_list), len(svc_C_list))
         print "accuracy_array = \n", accuracy_array
     else:
         print "Invalid selection. Program terminating. "
